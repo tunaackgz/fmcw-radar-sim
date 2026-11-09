@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FMCW Radar Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --panel:#E2E5E9;--surface:#F5F6F8;--ink:#1A2230;--lab:#2E3846;--muted:#5A6472;--line:#C1C7CF;
+  --key:#1C58A6;--key2:#2E72CC;--field:#FFFFFF;--bad:#B3261E;--dirty:#C77700;
+  --ron:#B88A00;--ton:#13805F;
+  --screen:#2B3646;--bezel:#3B434E;--grat:#435166;--gtxt:#BAC3CF;--mkv:#F2D23C;
+  --cond:'Barlow Semi Condensed',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --body:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --panel:#161A20;--surface:#1E232A;--ink:#E4E7EB;--lab:#CDD3DB;--muted:#97A1AD;--line:#363D47;
+    --key:#24599F;--key2:#3B7BD0;--field:#11151A;--bad:#FF8A80;--dirty:#F2B33D;--bezel:#1C2129;
+    --ron:#C99A00;--ton:#1D9E75;
+  }
+}
+:root[data-theme="dark"]{
+  --panel:#161A20;--surface:#1E232A;--ink:#E4E7EB;--lab:#CDD3DB;--muted:#97A1AD;--line:#363D47;
+  --key:#24599F;--key2:#3B7BD0;--field:#11151A;--bad:#FF8A80;--dirty:#F2B33D;--bezel:#1C2129;
+  --ron:#C99A00;--ton:#1D9E75;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--panel);color:var(--ink);font-family:var(--body);font-size:13.5px;line-height:1.3}
+header{display:flex;align-items:center;gap:14px;padding:6px 14px;border-bottom:1px solid var(--line);flex:none}
+h1{font-family:var(--cond);font-weight:600;font-size:20px;margin:0;letter-spacing:.005em}
+.hbar{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#presets{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;border:1px solid var(--key2);border-radius:3px;overflow:hidden}
+.chip button{border:0;border-radius:0;color:var(--key2)}
+.chip button+button{border-left:1px solid var(--line);color:var(--muted);padding:3px 7px}
+#pname{width:130px;height:24px;font:500 13px var(--body);padding:1px 6px;border:1px solid var(--line);border-radius:3px;background:var(--field);color:var(--ink)}
+#save{background:var(--key);border-color:var(--key);color:#fff}
+button{font:500 13px var(--cond);padding:3px 10px;border:1px solid var(--line);border-radius:3px;background:var(--field);color:var(--ink);cursor:pointer}
+.wrap{flex:1;min-height:0;display:grid;grid-template-columns:minmax(630px,2fr) minmax(0,3fr);gap:10px;padding:6px 12px 8px}
+.params{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(max-content,13fr) minmax(max-content,10fr) minmax(max-content,5fr) minmax(max-content,7fr);gap:6px;overflow:auto;min-height:0;min-width:0}
+.span{grid-column:1/-1}
+.grp{background:var(--surface);border:1px solid var(--line);border-radius:4px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
+.grp>h2{flex:none}
+.grp>h2{display:flex;justify-content:space-between;align-items:baseline;margin:0;background:var(--key);border-bottom:2px solid var(--key2);color:#fff;font:600 14px var(--cond);padding:2px 10px;letter-spacing:.01em}
+.grp>h2 small{font:400 12px var(--cond);color:#DCE6F5}
+.fl{padding:3px 10px;flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:18px;padding:3px 10px;flex:6 1 auto}
+.two>div{display:flex;flex-direction:column;justify-content:space-evenly;min-width:0}
+.f{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-height:21px;max-height:34px;min-width:0}
+.f label{flex:1;min-width:0;font:500 clamp(13.5px,1.5vh,15.5px) var(--cond);color:var(--lab);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f input,.f select,.f .ro{height:clamp(19px,2.3vh,25px);font:500 clamp(13px,1.45vh,15px) var(--body);font-variant-numeric:tabular-nums;padding:1px 6px;border:1px solid var(--line);border-radius:3px;background:var(--field);color:var(--ink)}
+.f input{width:82px;text-align:right}
+.f select{width:auto;min-width:78px;max-width:118px;padding:1px 3px}
+.f .ro{width:82px;text-align:right;background:transparent;border-color:transparent;line-height:17px}
+.f .u{flex:none;width:44px;font:500 12.5px var(--cond);color:var(--muted)}
+.f input.dirty{border-color:var(--dirty);box-shadow:inset 0 0 0 1px var(--dirty)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--key2);outline-offset:1px}
+.f .sel2{min-width:0;width:90px}
+.der{padding:2px 10px 2px;font-size:clamp(13px,1.45vh,15px);flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
+.der div{display:flex;justify-content:space-between;gap:8px;flex:1 1 auto;min-height:18px;max-height:32px;align-items:center;border-bottom:1px dotted var(--line)}
+.der div:last-child{border-bottom:0}
+.der span{color:var(--lab);font:500 clamp(13px,1.45vh,15px) var(--cond)}
+.der b{font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.f .sp{flex:1}
+.f .osel{width:122px;max-width:122px;min-width:0;flex:none}
+.obj{padding:0 0 1px;flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;border-bottom:1px dotted var(--line)}
+.obj:last-child{border-bottom:0}
+.tg{flex:none;width:122px;white-space:nowrap;overflow:hidden;height:19px;padding:0 6px;text-align:left;color:var(--muted)}
+.tg::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--line);transform:translateY(-1px)}
+.tg[aria-pressed="true"].r{background:var(--ron);border-color:var(--ron);color:#fff}
+.tg[aria-pressed="true"].t{background:var(--ton);border-color:var(--ton);color:#fff}
+.tg[aria-pressed="true"]::before{background:#fff}
+.tg[aria-pressed="true"].s{background:#F4A7A3;border-color:#E58A85;color:#5B1411}
+.tg[aria-pressed="true"].s::before{background:#B3261E}
+.tg.s{width:96px}
+.spr{padding:1px 10px 2px;flex:3 1 auto;display:flex;flex-direction:column;justify-content:space-evenly;border-top:1px solid var(--line)}
+.spr .f label{flex:1;text-align:right}
+.spr .f select{width:100px;min-width:0}
+.srow.off input,.srow.off select{opacity:.4}
+.srow.off label,.srow.off .u{opacity:.55}
+.obj.off input,.obj.off select{opacity:.4}
+.obj.off .f label,.obj.off .u{opacity:.55}
+.screens{min-height:0;min-width:0;display:flex;flex-direction:column;gap:12px}
+.panel{min-height:0;min-width:0;background:var(--screen);border:6px solid var(--bezel);border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:5px}
+.toprow{flex:0 0 39%;display:flex;gap:12px;min-height:0;min-width:0}
+.panel.pnp{flex:1 1 0}
+.panel.chp{flex:1 1 0}
+.cb.ch{flex:1 1 auto}
+.panel.rgp{flex:1 1 auto}
+.ttl{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:0 10px;font:600 17px var(--cond);color:#EEF2F7;letter-spacing:.01em}
+.ttl small{color:#C9D2DE;font-size:13.5px;font-weight:500;text-align:right;margin-left:auto}
+.lgd{display:flex;flex-wrap:wrap;gap:2px 14px;font:500 13px var(--cond);color:#D3DAE3}
+.lgd span{display:inline-flex;align-items:center;gap:5px}
+.sw{display:inline-block;width:16px;height:0;border-top:2px solid}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%}
+.vm{display:inline-flex;flex-direction:column;align-items:center}
+.vm i:first-child{width:6px;height:6px}.vm i:last-child{width:2px;height:7px}
+.cb{position:relative;min-height:0}
+.cb.pn{flex:1 1 auto}
+.rgbody{flex:1 1 auto;min-height:0;display:flex;gap:12px}
+.rgmain{flex:1 1 auto;min-width:0;min-height:0;display:flex;flex-direction:column;gap:5px}
+.cb.rg{flex:1 1 auto;min-height:150px}
+.side{flex:0 0 215px;display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--grat);padding-left:10px;overflow:auto;min-height:0}
+.side .sh2{font:600 13px var(--cond);color:#EEF2F7;padding-bottom:3px}
+.side .sh2 small{display:block;font-weight:400;color:#C9D2DE;font-size:12px}
+.side .it{display:flex;flex-direction:column;padding:2px 0 3px;border-bottom:1px solid var(--grat)}
+.side .it span{font:500 12.5px var(--cond);color:#C9D2DE}
+.side .it span i{font-style:normal;color:var(--gtxt);font-weight:400}
+.side .it b{font:500 15px var(--body);color:var(--mkv);font-variant-numeric:tabular-nums}
+.side .it b small{font:500 12.5px var(--body);color:#C9D2DE;margin-left:6px}
+.side .it.big b{font-size:18px}
+.side .it.sub{padding-left:10px}
+.side .it.sub b{font-size:14px}
+.side .sp2{height:6px;border-bottom:1px solid var(--grat)}
+.side .it b.neg{color:#FF7A7A}
+.side .it[data-doc]:hover span{text-decoration:underline dotted}
+#c2{cursor:crosshair;touch-action:none}
+.zbox{position:absolute;display:none;border:1px dashed #EEF2F7;background:rgba(238,242,247,.10);pointer-events:none}
+.lgd .hint{margin-left:auto;color:#9AA6B6;font-style:italic}
+.mk{flex:none;border:1px solid var(--grat);border-radius:3px;overflow:hidden}
+.mk table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.mk th{font:400 11.5px var(--cond);color:var(--gtxt);text-align:right;padding:2px 8px;border-bottom:1px solid var(--grat);white-space:nowrap}
+.mk td{font:500 13.5px var(--body);color:var(--mkv);text-align:right;padding:1px 8px;white-space:nowrap}
+.mk th:first-child,.mk td:first-child{text-align:left}
+.mk td:first-child{color:#6EE7A8;font-family:var(--cond)}
+.mk tr.off td{color:#77839A}
+.mk td.neg{color:#FF7A7A}
+.mk .glob{display:flex;flex-wrap:wrap;gap:2px 18px;padding:3px 8px;border-top:1px solid var(--grat);font:400 12px var(--cond);color:var(--gtxt)}
+.mk .glob b{font:500 13.5px var(--body);color:var(--mkv);margin-left:5px}
+.mk .glob b.neg{color:#FF7A7A}
+.status{flex:none;background:#25303F;border-radius:3px;padding:4px 10px;font:500 13px var(--cond);color:#C9D2DE;display:flex;flex-direction:column;gap:1px}
+.status p{margin:0;display:flex;gap:7px;align-items:baseline}
+.status i{flex:0 0 7px;height:7px;border-radius:50%;background:#6EE7A8;transform:translateY(-1px)}
+.status .warn i{background:#F2D23C}.status .err i{background:#FF5A5A}.status .info i{background:#4FC3F7}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(800px,54vw);background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-10px 0 30px rgba(0,0,0,.28);transform:translateX(105%);visibility:hidden;transition:transform .22s ease,visibility .22s;z-index:50;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.drawer.open{transform:none;visibility:visible}
+.dh{flex:none;display:flex;align-items:center;justify-content:space-between;padding:9px 18px;background:var(--key);border-bottom:2px solid var(--key2)}
+.dh h2{margin:0;font:600 18px var(--cond);color:#fff}
+.dc{overflow:auto;padding:14px 24px 48px;font-size:14.5px;line-height:1.55}
+.dc p{margin:6px 0;max-width:78ch}
+.lead{color:var(--lab)}
+.toc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px 16px;margin:12px 0 4px;padding:10px 14px;border:1px solid var(--line);border-radius:4px;background:var(--field)}
+.toc div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.toc b{font:600 12px var(--cond);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:5px}
+.toc a{font:500 13.5px var(--cond);color:var(--key2);text-decoration:none}
+.toc a:hover{text-decoration:underline}
+.part{font:600 14px var(--cond);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 0 2px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.dc section{padding:10px 12px;margin:4px -12px;border-radius:5px;scroll-margin-top:6px;transition:background 1.2s}
+.dc section.flash{background:rgba(46,114,204,.14);transition:none}
+.dc h4{margin:0 0 2px;font:600 17.5px var(--cond);color:var(--ink)}
+.eq{margin:8px 0;padding:8px 14px;background:var(--field);border-left:3px solid var(--key2);border-radius:0 4px 4px 0;font-family:'Cambria Math','STIX Two Math','Latin Modern Math','Times New Roman',serif;font-size:17px;line-height:2.1;overflow-x:auto}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.3;margin:0 2px}
+.fr>span:first-child{border-bottom:1px solid currentColor;padding:0 3px}
+.now{font-size:14px;color:var(--lab)}
+.now b,.now span[data-k],.nowc{font-variant-numeric:tabular-nums;color:var(--key2);font-weight:600}
+.dt{border-collapse:collapse;margin:8px 0;font-size:13.5px}
+.dt th,.dt td{border-bottom:1px solid var(--line);padding:3px 16px 3px 0;text-align:left}
+.chain{width:100%;height:auto;margin:6px 0}
+.chain .bx rect{fill:var(--field);stroke:var(--line)}
+.chain text{font:600 13px var(--cond);fill:var(--ink);text-anchor:middle}
+.chain text.s{font:400 11.5px var(--cond);fill:var(--muted)}
+.chain .ln{stroke:var(--muted);stroke-width:1.4;fill:none}
+.chain .dsh{stroke-dasharray:4 3}
+.dc ul{margin:6px 0;padding-left:20px}
+.dc li{margin:3px 0}
+.vars{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 14px;margin:2px 0 8px 3px;font-size:13.5px;line-height:1.45}
+.vars dt{font-family:'Cambria Math','STIX Two Math','Latin Modern Math','Times New Roman',serif;font-size:15px;color:var(--ink);white-space:nowrap}
+.vars dd{margin:0;color:var(--lab)}
+.steps tr:not(.sg) td:first-child{color:var(--muted);width:20px}
+.steps tr:not(.sg) td:last-child{font-variant-numeric:tabular-nums;color:var(--key2);font-weight:600;white-space:nowrap;text-align:right}
+.steps th:last-child{text-align:right}
+.steps tr.sg td{text-align:left;font:600 12px var(--cond);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding-top:9px}
+.steps tr.res td{border-top:2px solid var(--key2);font-weight:600}
+[data-doc]{cursor:help}
+.der div[data-doc]:hover span,.mk th[data-doc]:hover,.mk .glob span[data-doc]:hover,.ttl[data-doc]:hover{text-decoration:underline dotted}
+#dopen,#swopen{border-color:var(--key2);color:var(--key2)}
+.sweep{position:fixed;inset:0;z-index:45;background:var(--panel);display:none;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sweep.open{display:flex}
+.sh{flex:none;display:flex;align-items:center;gap:14px;padding:6px 14px;border-bottom:1px solid var(--line)}
+.sh h2{margin:0;font:600 20px var(--cond)}
+.sh .shn{font:400 13px var(--cond);color:var(--muted)}
+.sh .shb{margin-left:auto;display:flex;gap:6px}
+.sb{flex:1;min-height:0;display:grid;grid-template-columns:400px minmax(0,1fr);gap:12px;padding:10px 14px 12px}
+.sc{display:flex;flex-direction:column;gap:5px;overflow:auto;min-height:0}
+.sc .fl{flex:none}
+.sc>.grp{flex:none}
+.panel.spn{min-height:0}
+.cb.swc{flex:1 1 auto;min-height:220px}
+.ychk{display:flex;align-items:center;gap:8px;min-height:17px;font:500 13.5px var(--cond);line-height:17px;color:var(--lab);cursor:pointer}
+.ychk input{width:15px;height:15px;margin:0;accent-color:var(--key2)}
+.ychk .sw2{width:16px;height:0;border-top:2px solid transparent}
+.ychk .uu{margin-left:auto;font:400 12.5px var(--cond);color:var(--muted)}
+.ychk.dis{opacity:.4;cursor:not-allowed}
+.seg{display:flex}
+#sweep .f{gap:6px;min-height:25px}
+#sweep .f label{flex:0 0 126px;width:126px}
+#sweep .f>input,#sweep .f>select{flex:none;width:206px;min-width:0;max-width:206px;height:24px;box-sizing:border-box;font-size:13.5px;padding:2px 6px}
+#sweep .f>select{padding:2px 4px;font-family:var(--cond);font-size:14px}
+.params .f select{font-family:var(--cond);font-size:13.5px}
+#sweep .f>input{padding:2px 6px}
+#sweep input[type=number]{-moz-appearance:textfield;appearance:textfield}
+#sweep input[type=number]::-webkit-inner-spin-button,#sweep input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#sweep .f>#swcu,#sweep .f>#swno{width:84px;max-width:84px}
+#sweep .f>#swatr{width:78px;max-width:78px}
+#sweep .f>#swlog{width:126px;max-width:126px}
+#sweep .f>#swat{width:122px;max-width:122px}
+#sweep .f>#swtg{width:106px;max-width:106px}
+#sweep .f>input.pair{width:74px;max-width:74px}
+#sweep .f>.abtn{width:46px;height:24px}
+#sweep .f>.seg{flex:none;width:206px}
+#sweep .f>.seg button{flex:1 1 0;width:auto;height:24px}
+#sweep .f .u{flex:0 0 34px;width:34px}
+.seg button{flex:none;width:62px;height:21px;padding:0 4px;border-radius:0;font:500 12.5px var(--cond);margin-left:-1px}
+.seg button:first-child{border-radius:3px 0 0 3px;margin-left:0}.seg button:last-child{border-radius:0 3px 3px 0}
+.seg button[aria-pressed="true"]{background:var(--key);border-color:var(--key);color:#fff;position:relative}
+.chips{display:flex;flex-wrap:wrap;gap:4px;padding:3px 0 2px}
+.chip2{display:inline-flex;align-items:center;gap:4px;padding:1px 2px 1px 8px;border:1px solid var(--line);border-radius:11px;background:var(--field);font:500 12.5px var(--cond);color:var(--lab)}
+.chip2 button{border:0;background:transparent;padding:0 5px;font:600 13px var(--cond);color:var(--muted);line-height:1}
+.nlayer{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.ntb{display:none;position:absolute;left:-1px;bottom:calc(100% + 6px);align-items:center;gap:3px;padding:4px 6px;background:#F5F6F8;border:1px solid #8794A8;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.35);white-space:nowrap;cursor:default;z-index:3}
+.cnote.tbelow .ntb{bottom:auto;top:calc(100% + 6px)}
+.cnote.tright .ntb{left:auto;right:-1px}
+.cnote.edit .ntb{display:flex}
+.ntb button{height:22px;min-width:24px;padding:0 5px;border:1px solid #C1C7CF;border-radius:3px;background:#fff;color:#1A2230;font:500 13px var(--body);cursor:pointer}
+.ntb button.on{border-color:#1C58A6;box-shadow:inset 0 0 0 1px #1C58A6;background:#E3ECF8}
+.ntb .nsz{min-width:20px;text-align:center;font:600 12.5px var(--body);color:#1A2230}
+.ntb .nsep{width:1px;height:18px;background:#C1C7CF;margin:0 3px}
+.ntb .nsw,.ntb .nbg{min-width:0;width:18px;height:18px;padding:0;border-radius:50%;border:1px solid #8794A8}
+.ntb .nbg{border-radius:3px}
+.ntb .nbg[data-v="none"]{background:repeating-linear-gradient(45deg,#fff 0 3px,#C1C7CF 3px 6px)!important}
+.ntb .nsw.on,.ntb .nbg.on{box-shadow:0 0 0 2px #1C58A6}
+.cnote{position:absolute;pointer-events:auto;max-width:240px;padding:4px 20px 4px 8px;background:rgba(255,246,196,0.96);color:#1A2230;border:1px solid #1A2230;border-radius:3px;font:500 13px var(--body);line-height:1.35;cursor:move;box-shadow:0 2px 6px rgba(0,0,0,.35);user-select:none}
+.cnote[data-bg="dark"] .ndel{color:#C9D2DE}
+.cnote{box-sizing:border-box}
+.cnote .nh{position:absolute;width:9px;height:9px;background:#1C58A6;border:1px solid #fff;border-radius:2px;opacity:0;z-index:2}
+.cnote:hover .nh,.cnote.edit .nh{opacity:1}
+.cnote .nh-nw{left:-5px;top:-5px;cursor:nwse-resize}.cnote .nh-se{right:-5px;bottom:-5px;cursor:nwse-resize}
+.cnote .nh-ne{right:-5px;top:-5px;cursor:nesw-resize}.cnote .nh-sw{left:-5px;bottom:-5px;cursor:nesw-resize}
+.cnote .ntxt{overflow:hidden;height:100%;white-space:pre-wrap;word-break:break-word;min-width:30px;min-height:17px;outline:none}
+.cnote.edit{cursor:text;user-select:text;box-shadow:0 0 0 2px #2E72CC}
+.cnote.edit .ntxt:empty::before{content:'Type a note…';color:#7A8494}
+.cnote .ndel{position:absolute;top:1px;right:2px;width:16px;height:16px;padding:0;border:0;background:transparent;color:#5A6472;font:600 14px var(--body);line-height:14px;cursor:pointer;opacity:0}
+.cnote:hover .ndel,.cnote.edit .ndel{opacity:1}
+.nbtn{flex:none;align-self:center;margin-left:10px;padding:0 8px;height:20px;border:1px solid #8794A8;border-radius:3px;background:transparent;color:#D3DAE3;font:600 12px var(--cond);cursor:pointer}
+.nbtn:hover{border-color:#EEF2F7;color:#fff}
+.abtn{flex:none;width:48px;height:20px;padding:0 4px;font:500 12px var(--cond)}
+.abtn[aria-pressed="true"]{background:var(--key);border-color:var(--key);color:#fff}
+#sweep .f input:disabled{opacity:.6}
+.ysub{font:600 12px var(--cond);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:1px 0 0}
+#swx p{margin:0}
+#sweep .ttl{font-size:21px}
+#sweep .ttl small{font-size:15px}
+#swl{font-size:14.5px;gap:3px 16px}
+#swx{font-size:14px}
+@media (max-width:1000px){.sb{grid-template-columns:1fr}.sweep{overflow:auto}.cb.swc{height:420px;flex:none}}
+@media (max-width:900px){.drawer{width:100vw}.toc{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1300px),(max-height:760px){
+  body{height:auto;overflow:auto}
+  .wrap{grid-template-columns:1fr}
+  .params{overflow:visible;grid-template-rows:none}
+  .screens{height:auto}
+  .toprow{flex:none;flex-direction:column}
+  .panel.pnp,.panel.rgp,.panel.chp{flex:none}
+  .cb.ch{flex:none;height:260px}
+  .cb.pn{flex:none;height:260px}
+  .rgbody{flex:none;flex-direction:column}
+  .side{flex:none;border-left:0;padding-left:0}
+  .cb.rg{flex:none;height:360px}
+}
+@media (max-width:680px){
+  .params,.two{grid-template-columns:1fr}
+  .span{grid-column:auto}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>FMCW Radar Simulator</h1>
+  <button id="dopen" type="button" aria-controls="drawer">Theory &amp; equations</button>
+  <button id="swopen" type="button" aria-controls="sweep">Parameter sweep</button>
+  <div class="hbar"><input id="pname" type="text" placeholder="Preset name" aria-label="Preset name" maxlength="24"><button id="save" type="button">Save</button><button id="reset" type="button">Reset to defaults</button><span id="presets"></span></div>
+</header>
+<main class="wrap">
+  <section class="params" aria-label="Parameters">
+    <div class="grp"><h2>Radar Parameters</h2><div class="fl" id="g-radar"></div></div>
+    <div class="grp"><h2>Calculated</h2><div class="der" id="der"></div></div>
+    <div class="grp span"><h2>Phase Noise<small id="pnhdr"></small></h2><div class="two"><div id="g-pnL"></div><div id="g-pnR"></div></div><div class="spr" id="g-sp"></div></div>
+    <div class="grp span"><h2>Receiver</h2><div class="two"><div id="g-rxL"></div><div id="g-rxR"></div></div></div>
+    <div class="grp span"><h2>Scene</h2><div class="two"><div id="g-scL"></div><div id="g-scR"></div></div></div>
+  </section>
+  <section class="screens" aria-label="Charts and results">
+    <div class="toprow">
+    <div class="panel chp">
+      <div class="ttl" data-doc="d-tobs" title="How is this calculated?">Chirp timing<small id="t3"></small></div>
+      <div class="lgd">
+        <span><i class="sw" style="border-color:#8EC5FF"></i>TX chirp</span>
+        <span><i class="sw" style="border-color:#F2D23C;border-top-style:dashed"></i>Reflector echoes</span>
+        <span><i class="sw" style="border-color:#6EE7A8;border-top-style:dashed"></i>Target echoes</span>
+        <span><i style="display:inline-block;width:14px;height:9px;background:rgba(79,195,247,.28)"></i>Sampling window</span>
+      </div>
+      <div class="cb ch"><canvas id="c3" role="img" aria-label="Sawtooth chirp in time and frequency with reset, settling, sampling window and delayed echoes of enabled objects"></canvas></div>
+    </div>
+    <div class="panel pnp">
+    <div class="ttl" data-doc="d-pn" title="How is this calculated?">Phase noise at center frequency<small id="t1"></small></div>
+    <div class="lgd">
+      <span><i class="sw" style="border-color:#F2D23C"></i>Current L(f)</span>
+      <span><i class="dot" style="background:#FF9F43"></i>Reference measurement</span>
+      <span><i class="sw" style="border-color:#BAC3CF;border-top-style:dashed"></i>Loop BW</span>
+      <span><i class="sw" style="border-color:#4FC3F7;border-top-style:dotted"></i>Effective, strongest reflector (or leakage)</span>
+      <span><i class="sw" style="border-color:#6EE7A8;border-top-style:dashed"></i>Target offsets from it</span>
+      <span><i class="vm"><i style="background:#FF7A7A"></i><i style="background:#FF7A7A"></i></i>Spurs (dBc)</span>
+    </div>
+    <div class="cb pn"><canvas id="c1" role="img" aria-label="Phase noise versus offset with reference measurement, loop bandwidth and range-correlated effective curve"></canvas></div>
+    </div>
+    </div>
+    <div class="panel rgp">
+    <div class="ttl" data-doc="d-spec" title="How is this calculated?">Range spectrum, single chirp, referred to RX input<small id="t2"></small></div>
+    <div class="rgbody"><div class="rgmain">
+    <div class="lgd">
+      <span><i class="sw" style="border-color:#F2D23C"></i>Total</span>
+      <span><i class="sw" style="border-color:#BAC3CF;border-top-style:dashed"></i>Thermal + ADC floor</span>
+      <span><i class="sw" style="border-color:#4FC3F7;border-top-style:dotted"></i>Phase noise skirts</span>
+      <span><i class="sw" style="border-color:#D46BD8;border-top-style:dashed"></i>Window sidelobes</span>
+      <span><i class="sw" style="border-color:#8794A8;border-top-style:dashed"></i>Min. range</span>
+      <span><i class="vm"><i style="background:#F2D23C"></i><i style="background:#F2D23C"></i></i>Reflectors</span>
+      <span><i class="vm"><i style="background:#6EE7A8"></i><i style="background:#6EE7A8"></i></i>Targets</span>
+      <span><i class="vm"><i style="background:#FF7A7A"></i><i style="background:#FF7A7A"></i></i>Spur ghosts</span>
+      <span><i class="sw" style="border-color:#FF7A7A;border-top-style:dotted"></i>Fractional spur spread</span>
+      <span class="hint">Drag or scroll to zoom, right-click to reset</span>
+    </div>
+    <div class="cb rg"><canvas id="c2" role="img" aria-label="Power versus range with thermal and ADC floor, phase noise skirts, window sidelobes, reflectors and targets"></canvas></div>
+    <div class="mk" id="mk"></div>
+    <div class="status" id="st" aria-live="polite" data-doc="d-warn" title="What do these warnings mean?"></div>
+    </div><div class="side" id="side" aria-label="Noise budget"></div></div>
+    </div>
+  </section>
+</main>
+<section id="sweep" class="sweep" aria-label="Parameter sweep" aria-hidden="true">
+  <div class="sh"><h2>Parameter sweep</h2><span class="shn">Every parameter you do not sweep is taken from the simulator as it is set now.</span>
+    <div class="shb"><button id="swrun" type="button">Recalculate</button><button id="swclose" type="button">Back to simulator</button></div></div>
+  <div class="sb">
+    <aside class="sc">
+      <div class="grp"><h2>X axis</h2><div class="fl" id="sx"></div></div>
+      <div class="grp"><h2>Y axis</h2><div class="fl" id="sy"></div></div>
+      <div class="grp"><h2>Display</h2><div class="fl" id="so"></div></div>
+    </aside>
+    <div class="panel spn">
+      <div class="ttl"><span id="swtt">Sweep</span><small id="swts"></small></div>
+      <div class="lgd" id="swl"></div>
+      <div class="cb swc"><canvas id="c4" role="img" aria-label="Selected outputs plotted against the swept parameter, with crossing points marked"></canvas></div>
+      <div class="status" id="swx"></div>
+    </div>
+  </div>
+</section>
+<aside id="drawer" class="drawer" aria-label="Theory and equations" aria-hidden="true">
+  <div class="dh">
+    <h2>How the simulator calculates</h2>
+    <button id="dclose" type="button" aria-label="Close theory panel">Close</button>
+  </div>
+  <div class="dc" id="dc">
+    <p class="lead">Every number in the Calculated box, the results table and the FFT spectrum comes from the steps below. Each section starts with the physical picture, then the equation, then the value it gives with your current settings (<b class="nowc">Now</b>). Click any calculated value, table header or warning in the simulator to jump here.</p>
+    <nav class="toc" aria-label="Contents">
+      <div><b>Chirp and timing</b><a href="#d-tact">Active ramp</a><a href="#d-slope">Chirp slope</a><a href="#d-kpm">Beat per meter</a><a href="#d-fbmax">Beat at max. range</a><a href="#d-tobs">Observation time</a><a href="#d-beff">Effective BW</a><a href="#d-dr">Range resolution</a><a href="#d-bin">FFT bin</a><a href="#d-hpf">HPF corner</a></div>
+      <div><b>Doppler</b><a href="#d-prf">PRF</a><a href="#d-vmax">Max. velocity</a><a href="#d-dv">Velocity resolution</a><a href="#d-gd">Doppler gain</a><b>Signals</b><a href="#d-chain">Signal chain</a><a href="#d-pr">Received power</a><a href="#d-gate">Partial-window loss</a></div>
+      <div><b>Noise and spectrum</b><a href="#d-pn">Phase noise model</a><a href="#d-corr">Range correlation</a><a href="#d-floor">Thermal + ADC floor</a><a href="#d-win">Windowing</a><a href="#d-spec">Building the spectrum</a><a href="#d-spur">Spurs</a></div>
+      <div><b>Results</b><a href="#d-snr1">SNR, 1 chirp</a><a href="#d-snrd">SNR, Doppler</a><a href="#d-pnloss">Phase noise loss</a><a href="#d-enf">Effective NF</a><a href="#d-adc">ADC headroom</a><a href="#d-p1">RF P1dB headroom</a><a href="#d-warn">Warnings</a><a href="#d-lim">Assumptions</a></div>
+    </nav>
+
+    <h3 class="part">Chirp and timing</h3>
+
+    <section id="d-tact"><h4>Active ramp</h4>
+      <p>The synthesizer sweeps upward for part of each period and spends the rest resetting back to the start frequency. Only the upward part carries a linear chirp.</p>
+      <div class="eq"><i>T</i><sub>act</sub> = <i>T</i><sub>p</sub> − <i>T</i><sub>r</sub></div>
+      <dl class="vars"><dt><i>T</i><sub>act</sub></dt><dd>active (upward) ramp time</dd><dt><i>T</i><sub>p</sub></dt><dd>chirp period, <b>Chirp Period</b> box</dd><dt><i>T</i><sub>r</sub></dt><dd>reset time, <b>Reset Time</b> box</dd></dl>
+      <p class="now">Now: <span data-k="Tp"></span> − <span data-k="Tr"></span> = <b data-k="Tact"></b></p>
+    </section>
+
+    <section id="d-slope"><h4>Chirp slope</h4>
+      <p>How fast the frequency climbs. Everything that turns delay into frequency goes through this number.</p>
+      <div class="eq"><i>S</i> = <span class="fr"><span><i>B</i></span><span><i>T</i><sub>act</sub></span></span></div>
+      <dl class="vars"><dt><i>S</i></dt><dd>chirp slope, Hz/s</dd><dt><i>B</i></dt><dd>sweep bandwidth at RF, <b>Sweep BW</b> box</dd><dt><i>T</i><sub>act</sub></dt><dd>active ramp time</dd></dl>
+      <p class="now">Now: <span data-k="B"></span> / <span data-k="Tact"></span> = <b data-k="S"></b></p>
+    </section>
+
+    <section id="d-kpm"><h4>Beat per meter</h4>
+      <p>An echo from range <i>R</i> is a copy of the TX chirp delayed by τ = 2<i>R</i>/<i>c</i>. Mixing it with the live TX (the LO) leaves the frequency difference between the two parallel ramps: the beat frequency. It grows linearly with range, so the IF spectrum is a range axis. Think of the mixer as a spectrum analyzer whose frequency axis is labeled in meters.</p>
+      <div class="eq"><i>f</i><sub>b</sub> = <i>S</i>·τ = <span class="fr"><span>2<i>S</i></span><span><i>c</i></span></span>·<i>R</i> &nbsp;&nbsp;⇒&nbsp;&nbsp; <i>k</i> = <span class="fr"><span>2<i>S</i></span><span><i>c</i></span></span></div>
+      <dl class="vars"><dt><i>f</i><sub>b</sub></dt><dd>beat (IF) frequency after the mixer</dd><dt>τ</dt><dd>round-trip delay of the echo, 2<i>R</i>/<i>c</i></dd><dt><i>R</i></dt><dd>range of the object</dd><dt><i>c</i></dt><dd>speed of light, 2.998·10<sup>8</sup> m/s</dd><dt><i>k</i></dt><dd>beat frequency per meter of range</dd></dl>
+      <p class="now">Now: <i>k</i> = <b data-k="k"></b></p>
+    </section>
+
+    <section id="d-fbmax"><h4>Beat at max. range</h4>
+      <p>The highest IF frequency the receiver has to digitize. It sets the minimum sampling rate and the anti-aliasing filter corner.</p>
+      <div class="eq"><i>f</i><sub>b,max</sub> = <i>k</i>·<i>R</i><sub>max</sub> &nbsp;&nbsp; must stay below &nbsp;&nbsp; <i>f</i><sub>s</sub>/2</div>
+      <dl class="vars"><dt><i>R</i><sub>max</sub></dt><dd><b>Max. Range</b> box</dd><dt><i>f</i><sub>s</sub></dt><dd><b>Sampling Freq.</b> box</dd><dt><i>f</i><sub>s</sub>/2</dt><dd>Nyquist frequency, the highest IF the ADC can represent</dd></dl>
+      <p class="now">Now: <span data-k="k"></span> × <span data-k="Rmax"></span> = <b data-k="fbmax"></b>, Nyquist = <b data-k="nyq"></b></p>
+    </section>
+
+    <section id="d-tobs"><h4>Observation time</h4>
+      <p>The ADC samples from the end of PLL settling to the end of the ramp. This is the window shaded blue in the chirp panel. An echo from range <i>R</i> only becomes a clean copy of the current ramp after its own delay τ; before that, it still carries the previous chirp's tail and reset. So each object effectively occupies a shorter part of the window, like a pulse measured with a gate longer than the pulse.</p>
+      <div class="eq"><i>T</i><sub>obs</sub> = <i>T</i><sub>act</sub> − <i>t</i><sub>settle</sub> &nbsp;&nbsp;&nbsp; <i>T</i><sub>eff</sub>(<i>R</i>) = <i>T</i><sub>obs</sub> − <span class="fr"><span>2<i>R</i></span><span><i>c</i></span></span></div>
+      <dl class="vars"><dt><i>T</i><sub>obs</sub></dt><dd>sampling window of every chirp</dd><dt><i>t</i><sub>settle</sub></dt><dd><b>PLL Settling Time</b> box</dd><dt><i>T</i><sub>eff</sub>(<i>R</i>)</dt><dd>part of the window in which the echo from <i>R</i> is a clean copy of the current ramp</dd><dt>2<i>R</i>/<i>c</i></dt><dd>delay of that echo</dd></dl>
+      <p class="now">Now: <i>T</i><sub>obs</sub> = <b data-k="Tobs"></b>. <span data-k="tline"></span></p>
+    </section>
+
+    <section id="d-beff"><h4>Effective bandwidth</h4>
+      <p>The sweep bandwidth that actually falls inside the observation window. This, not the full sweep, determines resolution.</p>
+      <div class="eq"><i>B</i><sub>eff</sub> = <i>S</i>·<i>T</i><sub>obs</sub> &nbsp;&nbsp;&nbsp; (per target: <i>S</i>·<i>T</i><sub>eff</sub>)</div>
+      <dl class="vars"><dt><i>B</i><sub>eff</sub></dt><dd>bandwidth swept while the ADC is sampling</dd><dt><i>S</i></dt><dd>chirp slope</dd><dt><i>T</i><sub>obs</sub>, <i>T</i><sub>eff</sub></dt><dd>observation time, per-object effective time</dd></dl>
+      <p class="now">Now: <span data-k="S"></span> × <span data-k="Tobs"></span> = <b data-k="Beff"></b></p>
+    </section>
+
+    <section id="d-dr"><h4>Range resolution</h4>
+      <p>An FFT over <i>T</i><sub>obs</sub> cannot separate tones closer than 1/<i>T</i><sub>obs</sub>, exactly like an RBW. Dividing that frequency width by the beat-per-meter gives the width in meters. The window function widens it further (by about 1.5× for Hann).</p>
+      <div class="eq">Δ<i>R</i> = <span class="fr"><span>1/<i>T</i><sub>obs</sub></span><span><i>k</i></span></span> = <span class="fr"><span><i>c</i></span><span>2<i>B</i><sub>eff</sub></span></span></div>
+      <dl class="vars"><dt>Δ<i>R</i></dt><dd>smallest range separation two objects need to appear as two peaks</dd><dt>1/<i>T</i><sub>obs</sub></dt><dd>frequency resolution of the range FFT</dd><dt><i>k</i></dt><dd>beat per meter</dd><dt><i>B</i><sub>eff</sub></dt><dd>effective bandwidth</dd></dl>
+      <p class="now">Now: <b data-k="dR"></b> (best case, zero range). The results table shows each target's own Δ<i>R</i> using its <i>T</i><sub>eff</sub>.</p>
+    </section>
+
+    <section id="d-bin"><h4>FFT bin</h4>
+      <p>The frequency spacing of the range FFT, and the noise bandwidth of one bin before the window correction. All "per FFT bin" powers in the spectrum use it.</p>
+      <div class="eq">Δ<i>f</i><sub>bin</sub> = <span class="fr"><span>1</span><span><i>T</i><sub>obs</sub></span></span></div>
+      <dl class="vars"><dt>Δ<i>f</i><sub>bin</sub></dt><dd>FFT bin spacing in Hz; also the noise bandwidth of one bin before the window correction</dd></dl>
+      <p class="now">Now: <b data-k="Bbin"></b> → 10·log<sub>10</sub>(Δ<i>f</i><sub>bin</sub>) = <b data-k="bindb"></b></p>
+    </section>
+
+    <section id="d-hpf"><h4>HPF corner</h4>
+      <p>The IF high-pass filter is placed at the beat frequency of the minimum range. It knocks down leakage and very near clutter before they reach the ADC. It is modeled as 2nd order (40 dB/decade), which also partly compensates the 1/<i>R</i><sup>4</sup> fall of echo power. It attenuates a tone and the analog noise at the same frequency equally, but not the ADC's own noise, which is added after it.</p>
+      <div class="eq"><i>f</i><sub>HPF</sub> = <i>k</i>·<i>R</i><sub>min</sub> &nbsp;&nbsp;&nbsp; |<i>H</i>(<i>f</i>)|<sup>2</sup> = <span class="fr"><span>1</span><span>1 + (<i>f</i><sub>HPF</sub>/<i>f</i>)<sup>4</sup></span></span></div>
+      <dl class="vars"><dt><i>f</i><sub>HPF</sub></dt><dd>HPF corner frequency</dd><dt><i>R</i><sub>min</sub></dt><dd><b>Min. Range</b> box</dd><dt><i>f</i></dt><dd>beat frequency being evaluated</dd><dt>|<i>H</i>(<i>f</i>)|<sup>2</sup></dt><dd>power response of the HPF at <i>f</i>; the exponent 4 means 2nd order, 40 dB/decade</dd></dl>
+      <p class="now">Now: <span data-k="k"></span> × <span data-k="Rmin"></span> = <b data-k="fh"></b></p>
+    </section>
+
+    <h3 class="part">Doppler</h3>
+
+    <section id="d-prf"><h4>PRF</h4>
+      <p>One chirp per period, so the chirp repetition rate is the slow-time sampling rate of the Doppler FFT.</p>
+      <div class="eq">PRF = <span class="fr"><span>1</span><span><i>T</i><sub>p</sub></span></span></div>
+      <dl class="vars"><dt>PRF</dt><dd>chirps per second</dd><dt><i>T</i><sub>p</sub></dt><dd>chirp period</dd></dl>
+      <p class="now">Now: <b data-k="prf"></b></p>
+    </section>
+
+    <section id="d-vmax"><h4>Max. velocity</h4>
+      <p>A target moving at radial speed <i>v</i> shifts its echo phase by 4π<i>v</i><i>T</i><sub>p</sub>/λ from chirp to chirp. The Doppler FFT is unambiguous while that step stays within ±π, the slow-time version of Nyquist.</p>
+      <div class="eq"><i>v</i><sub>max</sub> = ± <span class="fr"><span>λ</span><span>4<i>T</i><sub>p</sub></span></span> &nbsp;&nbsp;&nbsp; λ = <span class="fr"><span><i>c</i></span><span><i>f</i><sub>c</sub></span></span></div>
+      <dl class="vars"><dt><i>v</i><sub>max</sub></dt><dd>largest radial speed that is not aliased, ±</dd><dt>λ</dt><dd>wavelength at the radiated frequency</dd><dt><i>f</i><sub>c</sub></dt><dd><b>Center Freq.</b> box</dd><dt><i>T</i><sub>p</sub></dt><dd>chirp period</dd></dl>
+      <p class="now">Now: λ = <span data-k="lam"></span> → <b data-k="vmax"></b>. Note that <i>f</i><sub>c</sub> is the radiated frequency; entering the synthesizer frequency instead of the multiplied RF frequency changes this value.</p>
+    </section>
+
+    <section id="d-dv"><h4>Velocity resolution</h4>
+      <p>The Doppler FFT spans <i>N</i> chirps, so its resolution is set by the total frame time, the same way range resolution is set by the chirp time.</p>
+      <div class="eq">Δ<i>v</i> = <span class="fr"><span>λ</span><span>2<i>N</i><i>T</i><sub>p</sub></span></span></div>
+      <dl class="vars"><dt>Δ<i>v</i></dt><dd>smallest speed difference the Doppler FFT can separate</dd><dt><i>N</i></dt><dd><b>Chirps per Frame</b> box</dd><dt><i>N</i>·<i>T</i><sub>p</sub></dt><dd>frame duration</dd></dl>
+      <p class="now">Now: <b data-k="dv"></b></p>
+    </section>
+
+    <section id="d-gd"><h4>Doppler gain</h4>
+      <p>Coherent integration over <i>N</i> chirps adds the target's amplitude while uncorrelated noise adds in power, so SNR improves by <i>N</i>. Phase-noise skirts behave like noise here, because the phase noise is different in every chirp.</p>
+      <div class="eq"><i>G</i><sub>D</sub> = 10·log<sub>10</sub><i>N</i></div>
+      <dl class="vars"><dt><i>G</i><sub>D</sub></dt><dd>SNR gain of the Doppler FFT, dB</dd><dt><i>N</i></dt><dd>number of chirps integrated</dd></dl>
+      <p class="now">Now: <b data-k="GD"></b></p>
+    </section>
+
+    <h3 class="part">Signals</h3>
+
+    <section id="d-chain"><h4>Signal chain</h4>
+      <p>Where each input box sits in the hardware. Every power in the FFT spectrum is referred back to the RX input so that targets, clutter and noise can be compared on one scale.</p>
+      <svg class="chain" viewBox="0 0 720 200" role="img" aria-label="Block diagram: synthesizer, power amplifier, TX antenna, target, RX antenna, RF chain, mixer, IF high-pass filter, ADC, range and Doppler FFT, with the parameter boxes that belong to each block">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6"/></marker></defs>
+        <g class="bx"><rect x="8" y="12" width="130" height="46" rx="5"/><text x="73" y="31">Synthesizer</text><text class="s" x="73" y="48">chirp, phase noise, spurs</text></g>
+        <g class="bx"><rect x="180" y="12" width="100" height="46" rx="5"/><text x="230" y="31">PA</text><text class="s" x="230" y="48">TX power</text></g>
+        <g class="bx"><rect x="322" y="12" width="110" height="46" rx="5"/><text x="377" y="31">TX antenna</text><text class="s" x="377" y="48">gain G</text></g>
+        <g class="bx"><rect x="560" y="12" width="152" height="46" rx="5"/><text x="636" y="31">Reflector / target</text><text class="s" x="636" y="48">range R, RCS σ</text></g>
+        <line class="ln" x1="138" y1="35" x2="178" y2="35" marker-end="url(#ar)"/>
+        <line class="ln" x1="280" y1="35" x2="320" y2="35" marker-end="url(#ar)"/>
+        <line class="ln" x1="432" y1="35" x2="558" y2="35" marker-end="url(#ar)"/>
+        <text class="s" x="495" y="28">2R/c delay</text>
+        <g class="bx"><rect x="8" y="138" width="96" height="50" rx="5"/><text x="56" y="158">RX antenna</text><text class="s" x="56" y="176">gain G</text></g>
+        <g class="bx"><rect x="128" y="138" width="110" height="50" rx="5"/><text x="183" y="158">RF chain</text><text class="s" x="183" y="176">NF, gain, P1dB</text></g>
+        <g class="bx"><rect x="262" y="138" width="80" height="50" rx="5"/><text x="302" y="158">Mixer</text><text class="s" x="302" y="176">flicker</text></g>
+        <g class="bx"><rect x="366" y="138" width="88" height="50" rx="5"/><text x="410" y="158">IF HPF</text><text class="s" x="410" y="176">from min. range</text></g>
+        <g class="bx"><rect x="478" y="138" width="96" height="50" rx="5"/><text x="526" y="158">ADC</text><text class="s" x="526" y="176">FS, SNR, fs</text></g>
+        <g class="bx"><rect x="598" y="138" width="114" height="50" rx="5"/><text x="655" y="158">Range + Doppler FFT</text><text class="s" x="655" y="176">window, N</text></g>
+        <line class="ln" x1="104" y1="163" x2="126" y2="163" marker-end="url(#ar)"/>
+        <line class="ln" x1="238" y1="163" x2="260" y2="163" marker-end="url(#ar)"/>
+        <line class="ln" x1="342" y1="163" x2="364" y2="163" marker-end="url(#ar)"/>
+        <line class="ln" x1="454" y1="163" x2="476" y2="163" marker-end="url(#ar)"/>
+        <line class="ln" x1="574" y1="163" x2="596" y2="163" marker-end="url(#ar)"/>
+        <path class="ln" d="M636 58 V92 H56 V136" fill="none" marker-end="url(#ar)"/>
+        <text class="s" x="346" y="86">echo</text>
+        <path class="ln dsh" d="M377 58 V78" fill="none"/>
+        <text class="s" x="383" y="74" style="text-anchor:start">leakage (isolation)</text>
+        <path class="ln" d="M73 58 V112 H302 V136" fill="none" marker-end="url(#ar)"/>
+        <text class="s" x="190" y="108">LO = live TX chirp</text>
+      </svg>
+    </section>
+
+    <section id="d-pr"><h4>Received power</h4>
+      <p>The monostatic radar equation in dB. Doubling the range costs 12 dB, because the wave spreads on the way out and on the way back. The same antenna gain is used for TX and RX. TX→RX leakage is a separate, very strong tone at almost zero range: TX power minus isolation. Its delay comes from the <b>Leakage Path Diff.</b> box: the difference in electrical length between the leakage path and the LO path into the mixer (30 cm ≈ 1 ns).</p>
+      <div class="eq"><i>P</i><sub>r</sub> = <i>P</i><sub>t</sub> + 2<i>G</i> + 20·log λ + σ − 30·log(4π) − 40·log <i>R</i> &nbsp;&nbsp; [dBm, dBi, dBsm]<br><i>P</i><sub>leak</sub> = <i>P</i><sub>t</sub> − <i>I</i><sub>TX→RX</sub></div>
+      <dl class="vars"><dt><i>P</i><sub>r</sub></dt><dd>power at the RX input, dBm</dd><dt><i>P</i><sub>t</sub></dt><dd><b>TX Power</b> box, dBm</dd><dt><i>G</i></dt><dd><b>Ant. Gain</b> box, dBi; counted twice (TX and RX)</dd><dt>λ</dt><dd>wavelength in meters, so 20·log λ is negative</dd><dt>σ</dt><dd>RCS from the Scene, dBsm (10·log of m²)</dd><dt><i>R</i></dt><dd>range in meters</dd><dt>30·log(4π)</dt><dd>33.0 dB, from the two spherical spreading terms</dd><dt><i>I</i><sub>TX→RX</sub></dt><dd><b>TX→RX Isolation</b> box</dd></dl>
+      <p class="now">Now: <span data-k="prline"></span> &nbsp; Leakage = <b data-k="Pl"></b></p>
+    </section>
+
+    <section id="d-gate"><h4>Partial-window loss</h4>
+      <p>An object whose echo is clean only for <i>T</i><sub>eff</sub> out of <i>T</i><sub>obs</sub> fills only part of the FFT window. Its coherent peak drops with the amplitude ratio, its spectral skirts (noise-like) drop with the power ratio, and its main lobe widens by 1/<i>g</i>.</p>
+      <div class="eq"><i>g</i> = <span class="fr"><span><i>T</i><sub>eff</sub></span><span><i>T</i><sub>obs</sub></span></span> &nbsp;&nbsp;&nbsp; tone: 20·log <i>g</i> &nbsp;&nbsp;&nbsp; skirt: 10·log <i>g</i></div>
+      <dl class="vars"><dt><i>g</i></dt><dd>fraction of the window the echo fills, 0…1</dd><dt><i>T</i><sub>eff</sub></dt><dd>clean echo time</dd><dt><i>T</i><sub>obs</sub></dt><dd>window length</dd><dt>20·log <i>g</i></dt><dd>loss of a coherent tone (amplitude ratio)</dd><dt>10·log <i>g</i></dt><dd>loss of noise-like content (power ratio)</dd></dl>
+      <p class="now">Now: <span data-k="gline"></span></p>
+    </section>
+
+    <h3 class="part">Noise and spectrum</h3>
+
+    <section id="d-pn"><h4>Phase noise model</h4>
+      <p>The six phase noise boxes show the current curve at the center frequency. Behind them is a reference curve defined at 12.025 GHz (initially your measurement), joined by straight lines on log-log axes; typing into a box adjusts that reference point so the displayed value matches. The curve is split into two physical sources: the PLL in-band noise (the points up to 100 kHz, held flat beyond) and the free-running VCO (the line through the 1 MHz and 10 MHz points). The loop acts as a low-pass for the in-band part and a high-pass for the VCO, crossing at the loop bandwidth. Changing the loop BW or the in-band and out-of-band offsets recombines the two parts; a correction term makes the curve match your points exactly at the reference settings. Finally, frequency multiplication adds 20·log of the frequency ratio.</p>
+      <div class="eq">|<i>H</i><sub>L</sub>|<sup>2</sup> = <span class="fr"><span>1</span><span>1 + (<i>f</i>/<i>f</i><sub>L</sub>)<sup>4</sup></span></span><br><i>L</i>(<i>f</i>) = 10·log[ 10<sup>(<i>L</i><sub>in</sub>+Δ<sub>in</sub>)/10</sup>·|<i>H</i><sub>L</sub>|<sup>2</sup> + 10<sup>(<i>L</i><sub>VCO</sub>+Δ<sub>out</sub>)/10</sup>·(1 − |<i>H</i><sub>L</sub>|<sup>2</sup>) ] + corr(<i>f</i>) + 20·log(<i>f</i><sub>c</sub>/<i>f</i><sub>ref</sub>)</div>
+      <dl class="vars"><dt><i>f</i></dt><dd>offset from the carrier</dd><dt><i>f</i><sub>L</sub></dt><dd><b>Loop BW</b> box</dd><dt>|<i>H</i><sub>L</sub>|<sup>2</sup></dt><dd>share of the PLL in-band noise at <i>f</i>; 1 − |<i>H</i><sub>L</sub>|<sup>2</sup> is the share of the VCO</dd><dt><i>L</i><sub>in</sub></dt><dd>in-band part: your points up to 100 kHz, held flat beyond</dd><dt><i>L</i><sub>VCO</sub></dt><dd>VCO part: the line through your 1 MHz and 10 MHz points</dd><dt>Δ<sub>in</sub>, Δ<sub>out</sub></dt><dd><b>In-band</b> and <b>Out-of-band Offset</b> boxes</dd><dt>corr(<i>f</i>)</dt><dd>correction that makes the curve pass exactly through your six points at the reference settings</dd><dt><i>f</i><sub>ref</sub></dt><dd>12.025 GHz, where the six points are defined</dd><dt><i>f</i><sub>c</sub></dt><dd><b>Center Freq.</b> box</dd></dl>
+      <p class="now">Now: loop BW <b data-k="lbw"></b>, in-band <b data-k="ain"></b>, out-of-band <b data-k="aout"></b>, scaling <b data-k="scl"></b></p>
+    </section>
+
+    <section id="d-corr"><h4>Range correlation</h4>
+      <p>The echo carries the same phase noise as the LO, delayed by τ. The mixer subtracts the two phases, so slow phase wander that hardly changes within τ cancels, like common-mode noise in a differential amplifier. Fast wander does not cancel. Near objects (small τ) are cleaned up to high offsets; far objects only at low offsets. With correlation turned off, the factor becomes +3 dB (two independent sources). For the leakage, τ is tiny, so the factor grows as (2π·Δ<i>f</i>·τ)<sup>2</sup>: every halving of the leakage path difference lowers the leakage noise floor by 6 dB.</p>
+      <div class="eq">factor = 4·sin<sup>2</sup>(π·Δ<i>f</i>·τ) &nbsp;&nbsp; ≈ (2π·Δ<i>f</i>·τ)<sup>2</sup> for Δ<i>f</i> ≪ 1/(πτ)</div>
+      <dl class="vars"><dt>Δ<i>f</i></dt><dd>offset from the object's own beat frequency, Δ<i>R</i>·<i>k</i></dd><dt>τ</dt><dd>delay of the object whose phase noise is being cancelled, 2<i>R</i>/<i>c</i> (for the leakage: Leakage Path Diff. / <i>c</i>, shown as Leakage delay in Calculated)</dd></dl>
+      <p class="now">Now: <span data-k="corrline"></span></p>
+    </section>
+
+    <section id="d-floor"><h4>Thermal + ADC floor</h4>
+      <p>The floor in every FFT bin comes from two independent noise sources, worked out separately and then added in power. Everything is referred to the RX input so it can be compared directly with the received echo powers.</p>
+      <p><b>RF path.</b> The front end adds noise like any receiver: kT at the input raised by the noise figure. Mixer and IF amplifier flicker noise adds to it at low beat frequencies (near ranges). The IF HPF then attenuates this noise exactly as much as it attenuates an echo at the same frequency.</p>
+      <p><b>ADC path.</b> The ADC adds its own noise after the RF gain and the HPF. An ADC with full scale FS and a given SNR has a total noise power of FS − SNR, spread evenly from 0 to <i>f</i><sub>s</sub>/2. To compare it with an RX-input signal it is divided by the RF gain, which is Friis' formula with the ADC as the last stage. The HPF does not reduce it, so where the HPF cuts deep (short range), the ADC noise can dominate.</p>
+      <div class="eq"><i>N</i><sub>RF</sub> = −174 + NF + 10·log Δ<i>f</i><sub>bin</sub> + ENBW + 10·log(1 + <i>f</i><sub>k</sub>/<i>f</i>) + |<i>H</i>(<i>f</i>)|<sup>2</sup><sub>dB</sub><br><i>N</i><sub>ADC</sub> = (FS − SNR) − 10·log(<i>f</i><sub>s</sub>/2) − <i>G</i><sub>RF</sub> + 10·log Δ<i>f</i><sub>bin</sub> + ENBW<br>floor = <i>N</i><sub>RF</sub> ⊕ <i>N</i><sub>ADC</sub></div>
+      <dl class="vars"><dt>−174</dt><dd>kT at 290 K: thermal noise density of a matched load, dBm/Hz</dd><dt>NF</dt><dd><b>RF Noise Figure (NF)</b> box</dd><dt>Δ<i>f</i><sub>bin</sub></dt><dd>FFT bin width, Hz; turns a density (per Hz) into power in one bin</dd><dt>ENBW</dt><dd>extra noise bandwidth of the window, dB (Hann 1.76 dB)</dd><dt><i>f</i><sub>k</sub></dt><dd><b>IF Flicker Corner</b> box; below it flicker noise exceeds white noise</dd><dt><i>f</i></dt><dd>beat frequency of the bin, <i>k</i>·<i>R</i></dd><dt>|<i>H</i>(<i>f</i>)|<sup>2</sup><sub>dB</sub></dt><dd>HPF response at <i>f</i> (0 dB far above the corner, negative below)</dd><dt>FS</dt><dd><b>ADC Full Scale</b> box, dBm</dd><dt>SNR</dt><dd><b>ADC SNR</b> box, dB, over the full Nyquist band</dd><dt><i>f</i><sub>s</sub></dt><dd><b>Sampling Freq.</b> box</dd><dt><i>G</i><sub>RF</sub></dt><dd><b>RF Gain</b> box: total gain from RX input to ADC input</dd><dt>⊕</dt><dd>power sum, 10·log(10<sup><i>N</i><sub>RF</sub>/10</sup> + 10<sup><i>N</i><sub>ADC</sub>/10</sup>)</dd></dl>
+      <p><b>Step by step</b> with your current values, evaluated at <span class="nowc" data-k="fl_where"></span>:</p>
+      <table class="dt steps">
+        <tr><th></th><th>Step</th><th>Adds</th><th>Running value</th></tr>
+        <tr class="sg"><td colspan="4">RF path</td></tr>
+        <tr><td>1</td><td>Thermal noise of a matched load at 290 K</td><td>kT</td><td data-k="fl1"></td></tr>
+        <tr><td>2</td><td>Receiver noise figure</td><td>+ NF</td><td data-k="fl2"></td></tr>
+        <tr><td>3</td><td>Power in one FFT bin</td><td>+ 10·log Δf<sub>bin</sub></td><td data-k="fl3"></td></tr>
+        <tr><td>4</td><td>Window noise bandwidth</td><td>+ ENBW</td><td data-k="fl4"></td></tr>
+        <tr><td>5</td><td>Flicker noise at this beat frequency</td><td>+ 10·log(1 + f<sub>k</sub>/f)</td><td data-k="fl5"></td></tr>
+        <tr><td>6</td><td>HPF at this beat frequency → <i>N</i><sub>RF</sub></td><td>+ |H|<sup>2</sup><sub>dB</sub></td><td data-k="fl6"></td></tr>
+        <tr class="sg"><td colspan="4">ADC path</td></tr>
+        <tr><td>7</td><td>Total ADC noise power</td><td>FS − SNR</td><td data-k="fa1"></td></tr>
+        <tr><td>8</td><td>Spread over 0 … f<sub>s</sub>/2 (density at the ADC)</td><td>− 10·log(f<sub>s</sub>/2)</td><td data-k="fa2"></td></tr>
+        <tr><td>9</td><td>Referred back to the RX input</td><td>− G<sub>RF</sub></td><td data-k="fa3"></td></tr>
+        <tr><td>10</td><td>Power in one FFT bin with window → <i>N</i><sub>ADC</sub></td><td>+ 10·log Δf<sub>bin</sub> + ENBW</td><td data-k="fa4"></td></tr>
+        <tr class="sg"><td colspan="4">Result</td></tr>
+        <tr class="res"><td>11</td><td>Floor = <i>N</i><sub>RF</sub> ⊕ <i>N</i><sub>ADC</sub></td><td>power sum</td><td data-k="fsum"></td></tr>
+      </table>
+      <p class="now">The result is the gray dashed curve in the spectrum at that range and the "Thermal floor" value under the results table. <span data-k="fdom"></span></p>
+    </section>
+
+    <section id="d-win"><h4>Windowing</h4>
+      <p>A window tapers the edges of the sampled chirp. It buys low sidelobes, so a strong reflector does not leak across the whole range axis, at the cost of a wider main lobe and a slightly higher noise bandwidth (ENBW), which is added to every noise term. Sidelobes of stationary clutter repeat identically every chirp, so the Doppler FFT removes them for moving targets.</p>
+      <table class="dt"><tr><th>Window</th><th>ENBW</th><th>First sidelobe</th><th>Decay</th></tr>
+        <tr><td>Rectangular</td><td>0 dB</td><td>−13 dB</td><td>20 dB/dec</td></tr>
+        <tr><td>Hann</td><td>1.76 dB</td><td>−31.5 dB</td><td>60 dB/dec</td></tr>
+        <tr><td>Blackman</td><td>2.37 dB</td><td>−58 dB</td><td>60 dB/dec</td></tr>
+        <tr><td>Blackman-Harris</td><td>3.01 dB</td><td>−92 dB</td><td>20 dB/dec</td></tr></table>
+      <p class="now">Now: <b data-k="win"></b></p>
+    </section>
+
+    <section id="d-spec"><h4>Building the spectrum</h4>
+      <p>For every point on the range axis, each enabled object (and the leakage) adds four things, and the yellow total is their power sum. If the point is inside the object's own bin, the object appears as a peak. Otherwise it contributes its phase-noise skirt at offset Δ<i>f</i> = |<i>R</i> − <i>R</i><sub>obj</sub>|·<i>k</i>, its window sidelobe at that distance, and any spur products.</p>
+      <div class="eq">peak = <i>P</i> + |<i>H</i>(<i>f</i><sub>obj</sub>)|<sup>2</sup><sub>dB</sub> + 20·log <i>g</i><br>skirt = <i>P</i> + <i>L</i>(Δ<i>f</i>) + 10·log[4sin<sup>2</sup>(πΔ<i>f</i>τ)] + 10·log Δ<i>f</i><sub>bin</sub> + ENBW + |<i>H</i>(<i>f</i>)|<sup>2</sup><sub>dB</sub> + 10·log <i>g</i><br>sidelobe = <i>P</i> + |<i>H</i>(<i>f</i><sub>obj</sub>)|<sup>2</sup><sub>dB</sub> + 20·log <i>g</i> + <i>W</i>(Δ<i>f</i>/Δ<i>f</i><sub>bin</sub>)</div>
+      <dl class="vars"><dt><i>P</i></dt><dd>object power at the RX input (radar equation)</dd><dt><i>f</i><sub>obj</sub></dt><dd>beat frequency of the object, <i>k</i>·<i>R</i><sub>obj</sub></dd><dt>Δ<i>f</i></dt><dd>frequency distance from the object to the point being drawn</dd><dt><i>L</i>(Δ<i>f</i>)</dt><dd>phase noise at that offset, dBc/Hz</dd><dt>τ</dt><dd>delay of the object</dd><dt><i>g</i></dt><dd>partial-window factor of the object</dd><dt><i>W</i>(<i>x</i>)</dt><dd>window sidelobe envelope <i>x</i> bins away from the peak</dd><dt>ENBW</dt><dd>window noise bandwidth, dB</dd></dl>
+      <p>The skirt is phase noise (dBc/Hz) times the bin bandwidth, which is why the FFT bin width appears in it. The sidelobe term is a pure processing artifact of the tone, so it uses the HPF value at the object's frequency, not at the point being evaluated.</p>
+    </section>
+
+    <section id="d-spur"><h4>Spurs</h4>
+      <p>A spur is a discrete phase-modulation sideband at offset <i>f</i><sub>s</sub>. After dechirping, every object gets two copies at its beat frequency ± <i>f</i><sub>s</sub>: a ghost target, scaled by the same range-correlation factor as phase noise. A fixed spur gives sharp ghosts. A fractional spur is modeled as fixed in absolute frequency, so its offset drifts with the chirp across the window; its energy is spread over all the bins it crosses and drops by that number of bins. Negative beat frequencies fold back onto the positive axis.</p>
+      <div class="eq">ghost at <i>R</i><sub>g</sub> = |<i>f</i><sub>obj</sub> ± <i>f</i><sub>s</sub>| / <i>k</i>, &nbsp; level = <i>P</i> + <i>L</i><sub>s</sub> + 20·log(<i>f</i><sub>c</sub>/<i>f</i><sub>ref</sub>) + 10·log[4sin<sup>2</sup>(π<i>f</i><sub>s</sub>τ)] + 20·log <i>g</i><br>fractional spread: − 10·log(<i>S</i>·<i>T</i><sub>eff</sub> / Δ<i>f</i><sub>bin</sub>)</div>
+      <dl class="vars"><dt><i>f</i><sub>s</sub></dt><dd><b>Offset</b> box of the spur</dd><dt><i>L</i><sub>s</sub></dt><dd><b>Level</b> box, dBc at the reference frequency</dd><dt><i>R</i><sub>g</sub></dt><dd>range where the ghost appears</dd><dt><i>S</i>·<i>T</i><sub>eff</sub></dt><dd>how far a fractional spur drifts during the window</dd><dt>Δ<i>f</i><sub>bin</sub></dt><dd>bin width; their ratio is the number of bins it is spread over</dd></dl>
+      <p>Ghosts from stationary reflectors repeat identically every chirp, land at zero Doppler and are removed for moving targets. Ghosts of a moving target move with it and survive Doppler processing.</p>
+    </section>
+
+    <h3 class="part">Results</h3>
+
+    <section id="d-snr1"><h4>SNR, 1 chirp</h4>
+      <p>The target's displayed peak against everything else in its bin in a single range FFT: thermal and ADC noise, phase-noise skirts, window sidelobes and spur products of all other objects.</p>
+      <div class="eq">SNR<sub>1</sub> = <i>P</i><sub>disp</sub> − [floor ⊕ skirts ⊕ sidelobes ⊕ spurs], &nbsp; <i>P</i><sub>disp</sub> = <i>P</i><sub>r</sub> + |<i>H</i>|<sup>2</sup><sub>dB</sub> + 20·log <i>g</i></div>
+      <dl class="vars"><dt><i>P</i><sub>disp</sub></dt><dd>target peak as it appears in the spectrum, after the HPF and the partial-window loss</dd><dt>floor</dt><dd>thermal + ADC noise per bin</dd><dt>skirts</dt><dd>phase noise of all other objects at the target's bin</dd><dt>sidelobes, spurs</dt><dd>window leakage and spur products of all other objects</dd><dt>⊕</dt><dd>power sum: 10·log(10<sup>a/10</sup> + 10<sup>b/10</sup> + …)</dd></dl>
+      <p class="now">Now: <span data-k="snr1line"></span></p>
+    </section>
+
+    <section id="d-snrd"><h4>SNR, Doppler</h4>
+      <p>After the Doppler FFT, a moving target is separated from stationary clutter. The sidelobes and spur ghosts of stationary objects stay at zero Doppler and drop out; thermal noise and phase-noise skirts change every chirp and spread over all Doppler bins, so they remain. The target gains 10·log <i>N</i> over them.</p>
+      <div class="eq">SNR<sub>D</sub> = <i>P</i><sub>disp</sub> − [floor ⊕ skirts] + 10·log <i>N</i></div>
+      <dl class="vars"><dt><i>N</i></dt><dd>chirps per frame</dd><dt>floor ⊕ skirts</dt><dd>the parts that change from chirp to chirp and therefore survive Doppler processing</dd></dl>
+      <p class="now">Now: <span data-k="snrdline"></span>. 13 dB is used as a typical detection threshold for highlighting.</p>
+    </section>
+
+    <section id="d-pnloss"><h4>Phase noise loss</h4>
+      <p>How much the phase-noise skirts of the other objects raise the floor in the target's bin, compared with thermal and ADC noise alone. Above about 3 dB the target is phase-noise limited: more TX power raises the target and the clutter skirts equally, so its SNR stops improving.</p>
+      <div class="eq">Phase noise loss = [floor ⊕ skirts] − floor</div>
+      <dl class="vars"><dt>floor</dt><dd>thermal + ADC noise in the target's bin</dd><dt>skirts</dt><dd>phase-noise contribution of all other objects in that bin</dd></dl>
+      <p class="now">Now: <span data-k="pnlline"></span></p>
+    </section>
+
+    <section id="d-enf"><h4>Effective NF</h4>
+      <p>The noise figure the whole receiver presents at the target's beat frequency, including flicker noise and the ADC noise that the HPF does not suppress. Low RF gain or a deep HPF cut lets the ADC dominate.</p>
+      <div class="eq">NF<sub>eff</sub> = floor − |<i>H</i>|<sup>2</sup><sub>dB</sub> − (−174 + 10·log Δ<i>f</i><sub>bin</sub> + ENBW)</div>
+      <dl class="vars"><dt>floor</dt><dd>thermal + ADC noise in the target's bin, RX-input referred</dd><dt>|<i>H</i>|<sup>2</sup><sub>dB</sub></dt><dd>HPF response at the target's beat frequency (negative)</dd><dt>−174 + 10·log Δ<i>f</i><sub>bin</sub> + ENBW</dt><dd>noise of a perfect, noiseless receiver in one bin</dd></dl>
+      <p class="now">Now: <b data-k="enf"></b></p>
+    </section>
+
+    <section id="d-adc"><h4>ADC headroom</h4>
+      <p>The total power reaching the ADC after the RF gain and the HPF, compared with full scale. The leakage tone sits at almost zero beat frequency, so the HPF removes most of it; strong near reflectors are usually what saturates the ADC.</p>
+      <div class="eq">headroom = FS − 10·log Σ 10<sup>(<i>P</i><sub>i</sub> + |<i>H</i>(<i>f</i><sub>i</sub>)|<sup>2</sup><sub>dB</sub> + <i>G</i><sub>RF</sub>)/10</sup></div>
+      <dl class="vars"><dt>FS</dt><dd><b>ADC Full Scale</b> box</dd><dt><i>P</i><sub>i</sub></dt><dd>power of every object and the leakage at the RX input</dd><dt>|<i>H</i>(<i>f</i><sub>i</sub>)|<sup>2</sup><sub>dB</sub></dt><dd>HPF response at each one's beat frequency</dd><dt><i>G</i><sub>RF</sub></dt><dd><b>RF Gain</b> box</dd></dl>
+      <p class="now">Now: total at ADC <b data-k="adcP"></b>, headroom <b data-k="adcm"></b></p>
+    </section>
+
+    <section id="d-p1"><h4>RF P1dB headroom</h4>
+      <p>The HPF sits after the mixer, so the LNA and mixer see the full leakage and every echo. Their total power is compared with the RF chain's input-referred 1 dB compression point.</p>
+      <div class="eq">headroom = P1dB<sub>in</sub> − 10·log Σ 10<sup><i>P</i><sub>i</sub>/10</sup></div>
+      <dl class="vars"><dt>P1dB<sub>in</sub></dt><dd><b>RF Input P1dB</b> box</dd><dt><i>P</i><sub>i</sub></dt><dd>all signals at the RX input, before any filtering</dd></dl>
+      <p class="now">Now: total at RX input <b data-k="rfP"></b>, headroom <b data-k="rfm"></b></p>
+    </section>
+
+    <section id="d-warn"><h4>Warnings</h4>
+      <ul>
+        <li><b>Nyquist:</b> the beat at max. range exceeds <i>f</i><sub>s</sub>/2 and would alias.</li>
+        <li><b>Previous chirp tail:</b> for the first τ of the window, an echo still belongs to the previous ramp. Its beat is about <i>S</i>·(<i>T</i><sub>p</sub> − τ), usually far above the IF band, so the anti-aliasing filter must reject it.</li>
+        <li><b>Reset echo:</b> a strong object with τ larger than the settling time returns its reset sweep inside the window. It sweeps through every IF frequency and raises a broadband floor; this is flagged but not modeled.</li>
+        <li><b>Same bin:</b> two objects closer than about two bins are not resolved.</li>
+        <li><b>Phase-noise limited:</b> Phase noise loss above 3 dB.</li>
+        <li><b>Ghost:</b> a spur product more than 10 dB above the floor; possible false target.</li>
+      </ul>
+    </section>
+
+    <section id="d-lim"><h4>Assumptions and limitations</h4>
+      <ul>
+        <li>Point objects, free space, no multipath, no antenna pattern, no atmospheric loss.</li>
+        <li>Reflectors are stationary and targets are moving, for the Doppler results only.</li>
+        <li>Real IF sampling; the AAF and its rejection are not modeled.</li>
+        <li>Window sidelobes use envelope approximations; the main lobe is simplified.</li>
+        <li>The phase noise loop split assumes points ≤100 kHz are in-band and the 1–10 MHz points follow the VCO.</li>
+        <li>Fractional spurs drift at the chirp slope (integer-boundary type).</li>
+      </ul>
+    </section>
+  </div>
+</aside>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const c0=299792458,lg=Math.log10,FREF=12.025,F0=222;
+const OFF=[1e2,1e3,1e4,1e5,1e6,1e7],OFFL=['100 Hz','1 kHz','10 kHz','100 kHz','1 MHz','10 MHz'];
+const MEAS=[-73.23,-89.46,-99.38,-103.80,-115.32,-133.46];
+const LBP=[['222','Standard'],['50','Narrow'],['1000','Wide']];
+const RCSP=[['Bird',-20],['Medium drone',-12],['Human',0],['Car',10],['Truck',20],['3-story bldg.',40]];
+const ENB=[0,1.76,2.37,3.01];
+const ps=(...a)=>10*lg(a.reduce((s,v)=>s+Math.pow(10,v/10),0));
+const $=id=>document.getElementById(id);
+function W(x,w){
+  if(w===0)return x<1?-6*x*x:-20*lg(Math.PI*x);
+  if(w===1)return x<2?-6*x*x:-31.5-60*lg(Math.max(x,2.5)/2.5);
+  if(w===2)return x<3?-6*x*x:-58-60*lg(Math.max(x,3.5)/3.5);
+  return x<4?-6*x*x:-92-20*lg(Math.max(x,4.5)/4.5);
+}
+const SPEC={};
+const G={
+  radar:[
+    ['fc','Center Freq.','GHz',12,0.05,0.1,300],
+    ['bw','Sweep BW','MHz',100,5,0.1,20000],
+    ['tp','Chirp Period','µs',100,1,1,1e6],
+    ['tr','Reset Time','µs',3,0.5,0,1e6],
+    ['tb','PLL Settling Time','µs',0,0.5,0,1e6],
+    ['nc','Chirps per Frame','',128,1,1,65536,1],
+    ['rmin','Min. Range','m',10,5,0,1e6],
+    ['rmax','Max. Range','m',500,50,10,1e6],
+    ['ptx','TX Power','dBm',20,0.5,-50,70],
+    ['ga','Ant. Gain (TX=RX)','dBi',20,0.5,-20,60],
+    ['iso','TX→RX Isolation','dB',60,1,0,200],
+    ['lk','Leakage Path Diff.','cm',30,5,1,10000]
+  ],
+  pnR:[
+    ['ain','In-band Offset','dB',0,0.5,-40,40],
+    ['aout','Out-of-band Offset','dB',0,0.5,-40,40],
+    ['cor','Range Correlation','',1,'sel:1=On,0=Off']
+  ],
+  rxL:[
+    ['nf','RF Noise Figure (NF)','dB',10,0.5,0,40],
+    ['grf','RF Gain','dB',40,0.5,0,120],
+    ['p1','RF Input P1dB','dBm',-10,0.5,-80,40],
+    ['fk','IF Flicker Corner','kHz',20,5,0,1e5]
+  ],
+  rxR:[
+    ['afs','ADC Full Scale','dBm',4,0.5,-40,40],
+    ['asnr','ADC SNR','dB',70,0.5,0,140],
+    ['afsr','Sampling Freq.','MSPS',40,5,0.1,1e5],
+    ['win','Windowing','',1,'sel:0=Rectangular,1=Hann,2=Blackman,3=Blackman-Harris']
+  ]
+};
+const OBJ=[
+  {id:'r1',name:'Reflector 1',k:'r',on:false,R:150,S:40},
+  {id:'r2',name:'Reflector 2',k:'r',on:false,R:400,S:10},
+  {id:'r3',name:'Reflector 3',k:'r',on:false,R:1000,S:40},
+  {id:'t1',name:'Target 1',k:'t',on:false,R:600,S:0},
+  {id:'t2',name:'Target 2',k:'t',on:false,R:1500,S:10},
+  {id:'t3',name:'Target 3',k:'t',on:false,R:2500,S:-12}
+];
+const KEY='fmcwRadarSim.v5b';
+let saved={};
+try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){saved={}}
+const sv=saved.f||{};
+let base=(Array.isArray(saved.base)&&saved.base.length===6)?saved.base.map(Number):MEAS.slice();
+const SPUR=[
+  {id:'s1',name:'Spur 1',on:false,T:0,F:200,L:-70},
+  {id:'s2',name:'Spur 2',on:false,T:0,F:300,L:-75},
+  {id:'s3',name:'Spur 3',on:false,T:1,F:50,L:-60}
+];
+const ON={};OBJ.forEach(o=>ON[o.id]=(saved.on&&o.id in saved.on)?!!saved.on[o.id]:o.on);
+SPUR.forEach(s=>ON[s.id]=(saved.on&&s.id in saved.on)?!!saved.on[s.id]:s.on);
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
+function numInput(id,def,step,min,max,int,onCommit){
+  SPEC[id]={def,min,max,int};
+  const i=el('input');i.type='number';i.id=id;i.step=step;i.inputMode='decimal';
+  if(max!==undefined)i.max=max;
+  i.value=(id in sv)?sv[id]:def;
+  i.addEventListener('input',()=>i.classList.add('dirty'));
+  i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();(onCommit||update)(i);}});
+  i.addEventListener('change',()=>(onCommit||update)(i));
+  return i;
+}
+function selInput(id,def,opts){
+  SPEC[id]={def};
+  const s=el('select');s.id=id;
+  opts.split(',').forEach(o=>{const[v,t]=o.split('=');const op=el('option',null,t||v);op.value=v;s.appendChild(op);});
+  s.value=(id in sv)?sv[id]:def;s.addEventListener('change',()=>update());return s;
+}
+function row(labelTxt,forId,ctrls,unit){
+  const d=el('div','f');const l=el('label',null,labelTxt);l.title=labelTxt;if(forId)l.htmlFor=forId;d.appendChild(l);
+  ctrls.forEach(c=>d.appendChild(c));d.appendChild(el('span','u',unit||''));return d;
+}
+function buildList(gid,list){
+  const g=$(gid);
+  list.forEach(([id,lab,u,def,st,min,max,int])=>{
+    const c=(typeof st==='string'&&st.startsWith('sel:'))?selInput(id,def,st.slice(4)):numInput(id,def,st,min,max,int);
+    g.appendChild(row(lab,id,[c],u));
+  });
+}
+buildList('g-radar',G.radar);
+OFF.forEach((f,i)=>{
+  const inp=numInput('pn'+i,MEAS[i],0.5,-200,0,0,commitPN);
+  $('g-pnL').appendChild(row('Phase noise @ '+OFFL[i],'pn'+i,[inp],'dBc/Hz'));
+});
+{
+  const s=el('select','sel2');s.id='lbsel';
+  [['','']].concat(LBP).forEach(([v,t])=>{const op=el('option',null,t);op.value=v;s.appendChild(op);});
+  s.addEventListener('change',()=>{if(s.value!==''){$('lbw').value=s.value;}update();});
+  const i=numInput('lbw',222,5,1,1e5,0,()=>update());
+  $('g-pnR').appendChild(row('Loop BW','lbw',[s,i],'kHz'));
+}
+buildList('g-pnR',G.pnR);
+{
+  const r=el('span','ro');r.id='pnscl';
+  $('g-pnR').appendChild(row('Scaling to fc',null,[r],'dB'));
+  const b=el('button',null,'Reference');b.type='button';b.id='pnref';b.style.width='82px';
+  b.addEventListener('click',()=>{base=MEAS.slice();$('lbw').value=222;$('ain').value=0;$('aout').value=0;$('cor').value='1';update();});
+  $('g-pnR').appendChild(row('Restore reference',null,[b],''));
+}
+buildList('g-rxL',G.rxL);buildList('g-rxR',G.rxR);
+SPUR.forEach(s=>{
+  const r=el('div','f srow');r.id='sr-'+s.id;
+  const tg=el('button','tg s',s.name);tg.type='button';tg.id='tg-'+s.id;
+  tg.addEventListener('click',()=>{ON[s.id]=!ON[s.id];update();});
+  const ty=selInput(s.id+'T',s.T,'0=Fixed,1=Fractional');ty.title=s.name+' type';ty.setAttribute('aria-label',s.name+' type');
+  const fo=numInput(s.id+'F',s.F,10,0,1e5),lv=numInput(s.id+'L',s.L,1,-200,0);
+  const l1=el('label',null,'Offset');l1.htmlFor=s.id+'F';const l2=el('label',null,'Level');l2.htmlFor=s.id+'L';
+  [tg,ty,l1,fo,el('span','u','kHz'),l2,lv,el('span','u','dBc')].forEach(e=>r.appendChild(e));
+  $('g-sp').appendChild(r);
+});
+OBJ.forEach(o=>{
+  const card=el('div','obj');card.id='o-'+o.id;
+  const tg=el('button','tg '+o.k,o.name);tg.type='button';tg.id='tg-'+o.id;
+  tg.addEventListener('click',()=>{ON[o.id]=!ON[o.id];update();});
+  const rIn=numInput(o.id+'R',o.R,10,0,1e6);
+  rIn.title=o.name+' range';rIn.setAttribute('aria-label',o.name+' range');
+  const r1=el('div','f');r1.appendChild(tg);r1.appendChild(el('span','sp'));r1.appendChild(rIn);r1.appendChild(el('span','u','m'));
+  card.appendChild(r1);
+  const s=el('select','osel');s.id=o.id+'P';s.title=o.name+' RCS preset';s.setAttribute('aria-label',o.name+' RCS preset');
+  [['','']].concat(RCSP.map((p,i)=>[String(i),p[0]])).forEach(([v,t])=>{const op=el('option',null,t);op.value=v;s.appendChild(op);});
+  s.addEventListener('change',()=>{if(s.value!=='')$(o.id+'S').value=RCSP[+s.value][1];update();});
+  const sIn=numInput(o.id+'S',o.S,1,-60,80);sIn.title=o.name+' RCS';sIn.setAttribute('aria-label',o.name+' RCS');
+  const r2=el('div','f');r2.appendChild(s);r2.appendChild(el('span','sp'));r2.appendChild(sIn);r2.appendChild(el('span','u','dBsm'));card.appendChild(r2);
+  $(o.k==='r'?'g-scL':'g-scR').appendChild(card);
+});
+function val(id){
+  const e=$(id),sp=SPEC[id]||{};let x=parseFloat(e.value);
+  if(!isFinite(x))x=sp.def;
+  if(sp.min!==undefined&&x<sp.min)x=sp.min;
+  if(sp.max!==undefined&&x>sp.max)x=sp.max;
+  if(sp.int)x=Math.round(x);
+  if(e.tagName==='INPUT'&&String(x)!==e.value&&parseFloat(e.value)!==x)e.value=x;
+  return x;
+}
+function Lb(f,B){
+  const x=lg(f);
+  if(x<=2)return B[0]+(B[1]-B[0])*(x-2);
+  if(x>=7)return B[5]+(B[5]-B[4])*(x-7);
+  const i=Math.floor(x)-2,t=x-Math.floor(x);return B[i]+(B[i+1]-B[i])*t;
+}
+const Lin=(f,B)=>f<=1e5?Lb(f,B):B[3];
+const Lvco=(f,B)=>B[4]+(B[5]-B[4])*lg(f/1e6);
+function Mdl(f,B,fc,aI,aO){const h=1/(1+Math.pow(f/fc,4));return 10*lg(Math.pow(10,(Lin(f,B)+aI)/10)*h+Math.pow(10,(Lvco(f,B)+aO)/10)*(1-h));}
+function Leff(f,B,fc,aI,aO){return Mdl(f,B,fc,aI,aO)+Lb(f,B)-Mdl(f,B,F0*1e3,0,0);}
+function pnMods(){return{fc:val('lbw')*1e3,aI:val('ain'),aO:val('aout')};}
+function commitPN(inp){
+  const i=+inp.id.slice(2);let T=parseFloat(inp.value);
+  if(!isFinite(T)){update();return;}
+  T=Math.min(0,Math.max(-200,T));
+  const m=pnMods();
+  const sc=20*lg(val('fc')/FREF);T-=sc;
+  for(let it=0;it<3;it++){const d=Leff(OFF[i],base,m.fc,m.aI,m.aO)-base[i];base[i]=T-d;}
+  update();
+}
+const GR='#435166',TXc='#BAC3CF';
+Chart.defaults.font.family="'Barlow Semi Condensed',system-ui,sans-serif";
+Chart.defaults.font.size=13.5;Chart.defaults.font.weight='500';Chart.defaults.color='#D3DAE3';
+const decade={1e2:'100',1e3:'1k',1e4:'10k',1e5:'100k',1e6:'1M',1e7:'10M'};
+const line=(color,dash,w)=>({data:[],showLine:true,borderColor:color,borderDash:dash||[],borderWidth:w||1.6,pointRadius:0,pointHoverRadius:0});
+const marker=(color,label)=>({label,data:[],showLine:true,borderColor:color,borderWidth:2,backgroundColor:color,pointStyle:'rect',pointRadius:c=>c.dataIndex===1?4.5:0,pointHoverRadius:c=>c.dataIndex===1?5.5:0});
+function tipEval(ch,t){
+  const d=ch.data.datasets[t.ds]&&ch.data.datasets[t.ds].data;if(!d||d.length<2)return null;
+  const lgx=ch.scales.x.type==='logarithmic',tx=lgx?Math.log10(t.x):t.x,c=[];
+  for(let i=0;i<d.length-1;i++){const a=d[i],b=d[i+1];if(a.x==null||b.x==null||a.y==null||b.y==null)continue;
+    const xa=lgx?Math.log10(a.x):a.x,xb=lgx?Math.log10(b.x):b.x;
+    if(Math.min(xa,xb)>tx||Math.max(xa,xb)<tx)continue;
+    if(xa===xb)c.push(Math.min(Math.max(t.y,Math.min(a.y,b.y)),Math.max(a.y,b.y)));else c.push(a.y+(b.y-a.y)*(tx-xa)/(xb-xa));}
+  if(!c.length)return null;return c.reduce((p,q)=>Math.abs(q-t.y)<Math.abs(p-t.y)?q:p);
+}
+const tipPlugin={id:'tips',afterDatasetsDraw(ch){
+  const tips=ch.$tips;if(!tips||!tips.length)return;const{ctx,chartArea:ca}=ch,X=ch.scales.x,Y=ch.scales.y;
+  ctx.save();ctx.font="500 12.5px 'Barlow',system-ui,sans-serif";ctx.textBaseline='top';const placed=[];
+  for(const t of tips){
+    t._box=null;const y=tipEval(ch,t);if(y==null)continue;t.y=y;
+    const dsy=ch.data.datasets[t.ds],YY=ch.scales[dsy.yAxisID||'y']||Y;const px=X.getPixelForValue(t.x),py=YY.getPixelForValue(y);
+    if(px<ca.left-1||px>ca.right+1||py<ca.top-1||py>ca.bottom+1)continue;
+    const ds=ch.data.datasets[t.ds],col=(typeof ds.borderColor==='string')?ds.borderColor:'#EEF2F7';
+    ctx.fillStyle=col;ctx.strokeStyle='#FFFFFF';ctx.lineWidth=1.5;ctx.fillRect(px-4,py-4,8,8);ctx.strokeRect(px-4,py-4,8,8);
+    const lines=ch.$fmt(t.x,y,dsy),w=Math.max(...lines.map(s=>ctx.measureText(s).width))+14,hh=lines.length*16+8;
+    const cand=q=>{let bx=(q===0||q===2)?px+12:px-12-w,by=(q<2)?py-hh-10:py+10;bx=Math.min(Math.max(bx,ca.left),ca.right-w);by=Math.min(Math.max(by,ca.top),ca.bottom-hh);return{bx,by};};
+    const fitsQ=q=>((q===0||q===2)?px+12+w<=ca.right:px-12-w>=ca.left)&&((q<2)?py-hh-10>=ca.top:py+10+hh<=ca.bottom);
+    const ovl=b=>placed.some(o=>b.bx<o.bx+o.w&&b.bx+w>o.bx&&b.by<o.by+o.h&&b.by+hh>o.by);
+    if(t.off==null){let best=null;for(const q of [0,1,2,3]){const b=cand(q);if(fitsQ(q)&&!ovl(b)){best=q;break;}}if(best==null)best=[0,1,2,3].find(q=>fitsQ(q));const b0=cand(best==null?0:best);t.off={dx:b0.bx-px,dy:b0.by-py};}
+    const bx=Math.min(Math.max(px+t.off.dx,ca.left),ca.right-w),by=Math.min(Math.max(py+t.off.dy,ca.top),ca.bottom-hh);placed.push({bx,by,w,h:hh});t._box={x:bx,y:by,w,h:hh};
+    {const lx=Math.min(Math.max(px,bx),bx+w),ly=Math.min(Math.max(py,by),by+hh);if(Math.hypot(lx-px,ly-py)>5){ctx.strokeStyle='rgba(248,249,251,0.8)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(lx,ly);ctx.stroke();}}
+    ctx.fillStyle='rgba(248,249,251,0.96)';ctx.fillRect(bx,by,w,hh);ctx.strokeStyle='#1A2230';ctx.lineWidth=1;ctx.strokeRect(bx+.5,by+.5,w-1,hh-1);
+    ctx.fillStyle='#1A2230';ctx.textAlign='left';lines.forEach((s,i)=>ctx.fillText(s,bx+7,by+5+i*16));
+  }
+  ctx.restore();}};
+function toggleTip(ch,px,py){
+  const tips=ch.$tips||(ch.$tips=[]),X=ch.scales.x,Y=ch.scales.y;
+  const YA=ds=>ch.scales[(ds&&ds.yAxisID)||'y']||Y;
+  for(let i=0;i<tips.length;i++){const t=tips[i];if(t.y==null)continue;if(Math.hypot(X.getPixelForValue(t.x)-px,YA(ch.data.datasets[t.ds]).getPixelForValue(t.y)-py)<11){tips.splice(i,1);ch.update('none');return;}}
+  let best=null;
+  ch.data.datasets.forEach((ds,di)=>{const d=ds.data;if(!d||d.length<2||ds.showLine!==true||ds.$noTip)return;const Y=YA(ds);
+    for(let i=0;i<d.length-1;i++){const a=d[i],b=d[i+1];if(a.x==null||b.x==null||a.y==null||b.y==null)continue;
+      const ax=X.getPixelForValue(a.x),ay=Y.getPixelForValue(a.y),bx=X.getPixelForValue(b.x),by=Y.getPixelForValue(b.y);
+      const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;let u=L2>0?((px-ax)*dx+(py-ay)*dy)/L2:0;u=Math.max(0,Math.min(1,u));
+      const qx=ax+u*dx,qy=ay+u*dy,dd=Math.hypot(qx-px,qy-py);if(!best||dd<best.d)best={d:dd,di,qx,qy};}});
+  if(!best||best.d>10)return;
+  let nx=X.getValueForPixel(best.qx),ny=YA(ch.data.datasets[best.di]).getValueForPixel(best.qy);
+  if(ch.$snap){nx=ch.$snap(nx);const y2=tipEval(ch,{ds:best.di,x:nx,y:ny});if(y2!=null)ny=y2;}
+  tips.push({ds:best.di,key:ch.data.datasets[best.di].$id,x:nx,y:ny});ch.update('none');
+}
+function tipHit(ch,px,py){const tips=ch.$tips||[],X=ch.scales.x;
+  for(let i=0;i<tips.length;i++){const t=tips[i];if(t.y==null)continue;const ds=ch.data.datasets[t.ds],Y=ch.scales[(ds&&ds.yAxisID)||'y'];if(!Y)continue;
+    if(Math.hypot(X.getPixelForValue(t.x)-px,Y.getPixelForValue(t.y)-py)<11)return i;}return -1;}
+function tipDrag(ch,i,px,py){const t=ch.$tips[i],ds=ch.data.datasets[t.ds];if(!ds||!ds.data)return;const X=ch.scales.x,Y=ch.scales[ds.yAxisID||'y'],d=ds.data;let best=null;
+  for(let j=0;j<d.length-1;j++){const a=d[j],b=d[j+1];if(a.x==null||b.x==null||a.y==null||b.y==null)continue;
+    const ax=X.getPixelForValue(a.x),ay=Y.getPixelForValue(a.y),bx=X.getPixelForValue(b.x),by=Y.getPixelForValue(b.y);
+    const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;let u=L2>0?((px-ax)*dx+(py-ay)*dy)/L2:0;u=Math.max(0,Math.min(1,u));
+    const qx=ax+u*dx,qy=ay+u*dy,dd=Math.hypot(qx-px,qy-py);if(!best||dd<best.d)best={d:dd,qx,qy};}
+  if(best){let x=X.getValueForPixel(best.qx),y=Y.getValueForPixel(best.qy);if(ch.$snap){x=ch.$snap(x);const y2=tipEval(ch,{ds:t.ds,x,y});if(y2!=null)y=y2;}t.x=x;t.y=y;ch.update('none');}}
+function boxHit(ch,px,py){const t=ch.$tips||[];for(let i=t.length-1;i>=0;i--){const b=t[i]._box;if(b&&px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h)return i;}return -1;}
+function boxMove(ch,i,bx,by){const t=ch.$tips[i];if(!t||t.y==null)return;const ds=ch.data.datasets[t.ds],Y=ch.scales[(ds&&ds.yAxisID)||'y'];if(!Y)return;
+  const mx=ch.scales.x.getPixelForValue(t.x),my=Y.getPixelForValue(t.y);t.off={dx:bx-mx,dy:by-my};ch.update('none');}
+function attachTips(ch,cv){let st=null;const pos=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};
+  cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;const p=pos(e),bi=boxHit(ch,p.x,p.y);const nt=ch.$note;
+    if(nt&&bi<0&&p.x>=nt.x&&p.x<=nt.x+nt.w&&p.y>=nt.y&&p.y<=nt.y+nt.h){st={note:true};cv.setPointerCapture(e.pointerId);cv.style.cursor='move';return;}
+    if(bi>=0){const b=ch.$tips[bi]._box;st={box:bi,gx:p.x-b.x,gy:p.y-b.y};cv.setPointerCapture(e.pointerId);cv.style.cursor='move';return;}
+    const i=tipHit(ch,p.x,p.y);st={i,x:p.x,y:p.y,moved:false};if(i>=0){cv.setPointerCapture(e.pointerId);cv.style.cursor='grabbing';}});
+  cv.addEventListener('pointermove',e=>{if(st&&st.note){const p=pos(e),ca=ch.chartArea,q=(p.x>(ca.left+ca.right)/2?1:0)+(p.y>(ca.top+ca.bottom)/2?2:0);if(q!==SW.noteCorner){SW.noteCorner=q;const cs=$('swnc');if(cs)cs.value=String(q);ch.update();}return;}
+    if(st&&st.box!=null){const p=pos(e);boxMove(ch,st.box,p.x-st.gx,p.y-st.gy);return;}
+    if(!cv.hasPointerCapture(e.pointerId)){const p=pos(e);cv.style.cursor=boxHit(ch,p.x,p.y)>=0?'move':(tipHit(ch,p.x,p.y)>=0?'grab':'');}
+    if(!st||st.i<0)return;const p=pos(e);if(!st.moved&&Math.hypot(p.x-st.x,p.y-st.y)<3)return;st.moved=true;tipDrag(ch,st.i,p.x,p.y);});
+  cv.addEventListener('pointerup',e=>{if(!st)return;const p=pos(e),s=st;st=null;cv.style.cursor='';
+    if(s.note){try{localStorage.setItem('fmcwRadarSim.sweep2',JSON.stringify(SW))}catch(e){}return;}
+    if(s.box!=null)return;
+    if(s.i>=0){if(!s.moved){ch.$tips.splice(s.i,1);ch.update('none');}return;}
+    if(Math.hypot(p.x-s.x,p.y-s.y)<6)toggleTip(ch,p.x,p.y);});
+  cv.addEventListener('pointercancel',()=>{st=null;cv.style.cursor='';});}
+const niceStep=v=>{if(!(v>0))return 1;const p10=Math.pow(10,Math.floor(Math.log10(v)));return[1,2,5,10].map(m=>m*p10).find(x=>x>=v*0.999);};
+const snapLin=(x,st)=>+(Math.round(x/st)*st).toPrecision(12);
+const snapLog=x=>{if(!(x>0))return x;const e=Math.floor(Math.log10(x)),p=Math.pow(10,e);let m=Math.round(x/p*10)/10;if(m>=10){m=1;return +(10*p).toPrecision(6);}return +(m*p).toPrecision(6);};
+const NOTEKEY='fmcwRadarSim.notes';let NOTES={};try{NOTES=JSON.parse(localStorage.getItem(NOTEKEY)||'{}')||{}}catch(e){NOTES={}}
+['c1','c2','c3'].forEach(k=>delete NOTES[k]);
+const NCOL=['#1A2230','#C0262D','#1C58A6','#13805F','#B35C00','#6B3FA0','#FFFFFF'],NBG={yellow:'rgba(255,246,196,0.96)',white:'rgba(255,255,255,0.96)',dark:'rgba(30,38,50,0.92)',none:'transparent'};
+function nStyle(e,n){const t=e.querySelector('.ntxt');t.style.fontSize=(n.size||13)+'px';t.style.fontWeight=n.bold?'700':'500';t.style.fontStyle=n.italic?'italic':'normal';t.style.color=n.color||'#1A2230';
+  const bg=n.bg||'yellow';e.style.background=NBG[bg]||NBG.yellow;e.style.borderColor=bg==='none'?'transparent':(bg==='dark'?'#8794A8':'#1A2230');e.style.boxShadow=bg==='none'?'none':'';e.dataset.bg=bg;
+  const sz=e.querySelector('.nsz');if(sz)sz.textContent=(n.size||13);e.querySelectorAll('.ntb [data-k]').forEach(b=>{const k=b.dataset.k,v=b.dataset.v;b.classList.toggle('on',(k==='bold'&&n.bold)||(k==='italic'&&n.italic)||(k==='color'&&(n.color||'#1A2230')===v)||(k==='bg'&&bg===v));});}
+function saveNotes(){try{localStorage.setItem(NOTEKEY,JSON.stringify(NOTES))}catch(e){}}
+function noteLayer(ch){if(!ch.$nl){const l=el('div','nlayer');ch.canvas.parentElement.appendChild(l);ch.$nl=l;}return ch.$nl;}
+function editNote(e){const t=e.querySelector('.ntxt');t.contentEditable='true';e.classList.add('edit');e.classList.toggle('tbelow',e.offsetTop<44);{const tb=e.querySelector('.ntb'),host=e.parentElement;e.classList.toggle('tright',!!tb&&!!host&&e.offsetLeft+tb.offsetWidth>host.clientWidth-4);}t.focus();const r=document.createRange();r.selectNodeContents(t);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}
+function makeNoteEl(ch){
+  const e=el('div','cnote'),t=el('div','ntxt'),d=el('button','ndel','×');d.type='button';d.title='Delete note';d.setAttribute('aria-label','Delete note');t.contentEditable='false';e.appendChild(t);e.appendChild(d);
+  const id=ch.canvas.id;let dr=null;
+  const tb=el('div','ntb');const mk=(txt,title,k,v,fn)=>{const b=el('button',null,txt);b.type='button';b.title=title;if(k){b.dataset.k=k;if(v!=null)b.dataset.v=v;}
+    b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();});b.addEventListener('click',ev=>{ev.preventDefault();ev.stopPropagation();const n=(NOTES[id]||[])[e.$i];if(!n)return;fn(n);nStyle(e,n);saveNotes();t.focus();});tb.appendChild(b);return b;};
+  mk('A−','Smaller text',null,null,n=>{n.size=Math.max(9,(n.size||13)-1);});const sz=el('span','nsz','13');tb.appendChild(sz);mk('A+','Larger text',null,null,n=>{n.size=Math.min(40,(n.size||13)+1);});
+  tb.appendChild(el('span','nsep'));
+  mk('B','Bold','bold',null,n=>{n.bold=!n.bold;}).style.fontWeight='700';mk('I','Italic','italic',null,n=>{n.italic=!n.italic;}).style.fontStyle='italic';
+  tb.appendChild(el('span','nsep'));
+  NCOL.forEach(c=>{const b=mk('','Text color','color',c,n=>{n.color=c;});b.className='nsw';b.style.background=c;});
+  tb.appendChild(el('span','nsep'));
+  [['yellow','Yellow background'],['white','White background'],['dark','Dark background'],['none','No background']].forEach(([k,ti])=>{const b=mk('',ti,'bg',k,n=>{n.bg=k;});b.className='nbg';b.style.background=k==='none'?'transparent':NBG[k];});
+  e.appendChild(tb);
+  ['nw','ne','sw','se'].forEach(c=>{const hd=el('span','nh nh-'+c);hd.title='Drag to resize';let rs=null;
+    hd.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;ev.preventDefault();ev.stopPropagation();hd.setPointerCapture(ev.pointerId);
+      rs={sx:ev.clientX,sy:ev.clientY,l:e.offsetLeft,t:e.offsetTop,w:e.offsetWidth,h:e.offsetHeight};});
+    hd.addEventListener('pointermove',ev=>{if(!rs)return;const n=(NOTES[id]||[])[e.$i];if(!n)return;const dx=ev.clientX-rs.sx,dy=ev.clientY-rs.sy,ca=ch.chartArea;
+      let l=rs.l,tp=rs.t,w=rs.w,hh=rs.h;
+      if(c[1]==='e')w=rs.w+dx;else{w=rs.w-dx;l=rs.l+dx;}
+      if(c[0]==='s')hh=rs.h+dy;else{hh=rs.h-dy;tp=rs.t+dy;}
+      if(w<50){if(c[1]==='w')l-=50-w;w=50;}if(hh<24){if(c[0]==='n')tp-=24-hh;hh=24;}
+      if(l<ca.left){w-=ca.left-l;l=ca.left;}if(tp<ca.top){hh-=ca.top-tp;tp=ca.top;}if(l+w>ca.right)w=ca.right-l;if(tp+hh>ca.bottom)hh=ca.bottom-tp;
+      n.w=Math.round(w);n.h=Math.round(hh);n.x=ch.scales.x.getValueForPixel(l);n.y=ch.scales.y.getValueForPixel(tp);
+      e.style.left=l+'px';e.style.top=tp+'px';e.style.width=n.w+'px';e.style.height=n.h+'px';e.style.maxWidth='none';});
+    hd.addEventListener('pointerup',()=>{if(rs){rs=null;saveNotes();}});
+    hd.addEventListener('dblclick',ev=>ev.stopPropagation());
+    e.appendChild(hd);});
+  e.addEventListener('pointerdown',ev=>{ev.stopPropagation();if(ev.button!==0||ev.target===d||t.isContentEditable)return;const r=e.getBoundingClientRect();dr={gx:ev.clientX-r.left,gy:ev.clientY-r.top,moved:false};e.setPointerCapture(ev.pointerId);});
+  e.addEventListener('pointermove',ev=>{if(!dr)return;const host=ch.canvas.getBoundingClientRect(),ca=ch.chartArea;let px=ev.clientX-host.left-dr.gx,py=ev.clientY-host.top-dr.gy;
+    px=Math.min(Math.max(px,ca.left),ca.right-e.offsetWidth);py=Math.min(Math.max(py,ca.top),ca.bottom-e.offsetHeight);dr.moved=true;
+    const n=NOTES[id][e.$i];n.x=ch.scales.x.getValueForPixel(px);n.y=ch.scales.y.getValueForPixel(py);e.style.left=px+'px';e.style.top=py+'px';});
+  e.addEventListener('pointerup',()=>{if(dr&&dr.moved)saveNotes();dr=null;});
+  e.addEventListener('dblclick',ev=>{ev.stopPropagation();editNote(e);});
+  t.addEventListener('keydown',ev=>{if(ev.key==='Escape'||(ev.key==='Enter'&&!ev.shiftKey)){ev.preventDefault();t.blur();}ev.stopPropagation();});
+  t.addEventListener('blur',()=>{t.contentEditable='false';e.classList.remove('edit');const list=NOTES[id]||[],txt=t.innerText.replace(/\s+$/,'');
+    if(!txt.trim()){list.splice(e.$i,1);}else if(list[e.$i])list[e.$i].text=txt;saveNotes();syncNotes(ch);});
+  d.addEventListener('click',ev=>{ev.stopPropagation();(NOTES[id]||[]).splice(e.$i,1);saveNotes();syncNotes(ch);});
+  return e;
+}
+function syncNotes(ch){
+  const id=ch.canvas.id,list=NOTES[id]||[],layer=noteLayer(ch),ca=ch.chartArea,X=ch.scales.x,Y=ch.scales.y;if(!ca||!X||!Y)return;
+  while(layer.children.length<list.length)layer.appendChild(makeNoteEl(ch));
+  while(layer.children.length>list.length)layer.lastChild.remove();
+  list.forEach((n,i)=>{const e=layer.children[i],t=e.querySelector('.ntxt');e.$i=i;if(!t.isContentEditable&&t.innerText!==n.text)t.innerText=n.text;
+    const px=X.getPixelForValue(n.x),py=Y.getPixelForValue(n.y),vis=isFinite(px)&&isFinite(py)&&px>=ca.left-1&&px<=ca.right&&py>=ca.top-1&&py<=ca.bottom;
+    e.style.display=vis||t.isContentEditable?'block':'none';e.style.left=px+'px';e.style.top=py+'px';
+    if(n.w){e.style.width=n.w+'px';e.style.maxWidth='none';}else{e.style.width='';e.style.maxWidth='';}e.style.height=n.h?n.h+'px':'';nStyle(e,n);});
+}
+function addNote(ch,px,py){
+  const ca=ch.chartArea;if(px==null){px=(ca.left+ca.right)/2-60;py=(ca.top+ca.bottom)/2-14;}
+  const id=ch.canvas.id;(NOTES[id]=NOTES[id]||[]).push({x:ch.scales.x.getValueForPixel(px),y:ch.scales.y.getValueForPixel(py),text:'',size:14,color:'#1A2230',bold:false,italic:false,bg:'yellow'});
+  syncNotes(ch);const layer=noteLayer(ch);editNote(layer.children[layer.children.length-1]);
+}
+Chart.register({id:'notes',afterDraw(ch){if(ch.canvas.id==='c4')syncNotes(ch);}});
+const fmtF=f=>f>=1e6?(f/1e6).toFixed(3)+' MHz':f>=1e3?(f/1e3).toFixed(2)+' kHz':f.toFixed(0)+' Hz';
+const c1=new Chart($('c1'),{type:'scatter',data:{datasets:[
+  line('#F2D23C',[],2),
+  {data:[],pointRadius:4,backgroundColor:'#FF9F43',borderColor:'#2B3646',borderWidth:1.5},
+  {data:[],pointRadius:3,backgroundColor:'#F2D23C',borderColor:'#2B3646',borderWidth:1},
+  line('#BAC3CF',[5,4],1.2),
+  line('#4FC3F7',[2,3]),
+  line('#6EE7A8',[6,4],1.2),line('#6EE7A8',[6,4],1.2),line('#6EE7A8',[6,4],1.2),
+  {data:[],showLine:true,spanGaps:false,borderColor:'#FF7A7A',borderWidth:2,pointRadius:0,pointHoverRadius:0},
+  {data:[],showLine:true,spanGaps:false,borderColor:'#FF7A7A',borderWidth:1.6,borderDash:[5,3],pointRadius:0,pointHoverRadius:0}
+]},options:{animation:false,responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex<3||i.datasetIndex===4,callbacks:{label:q=>{const f=q.parsed.x;return (f>=1e6?(f/1e6).toFixed(2)+' MHz':(f/1e3).toFixed(2)+' kHz')+': '+q.parsed.y.toFixed(1)+' dBc/Hz';}}}},
+  scales:{x:{type:'logarithmic',min:1e2,max:3e7,grid:{color:GR},ticks:{autoSkip:false,callback:v=>decade[v]||''},title:{display:true,font:{size:14.5,weight:'600'},text:'Offset (Hz)'}},
+          y:{min:-150,max:-60,grid:{color:GR},ticks:{stepSize:10,autoSkip:false},title:{display:true,font:{size:14.5,weight:'600'},text:'dBc/Hz'}}}},plugins:[tipPlugin]});
+let ZOOM=null;
+const c2=new Chart($('c2'),{type:'scatter',data:{datasets:[
+  line('#F2D23C',[],1.6),
+  line('#BAC3CF',[6,4],1.3),
+  line('#4FC3F7',[2,3],1.5),
+  line('#D46BD8',[6,4],1.2),
+  line('#8794A8',[5,4],1.2)
+].concat(OBJ.map(o=>marker(o.k==='r'?'#F2D23C':'#6EE7A8',o.name))).concat([line('#FF7A7A',[2,3],1.3),{label:'Spur ghost',data:[],showLine:true,spanGaps:false,borderColor:'#FF7A7A',borderWidth:1.6,backgroundColor:'#FF7A7A',pointStyle:'rect',pointRadius:c=>c.dataIndex%3===1?3.5:0,pointHoverRadius:c=>c.dataIndex%3===1?4.5:0}])},
+options:{animation:false,responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex!==4&&i.datasetIndex!==11&&!(i.datasetIndex>4&&i.datasetIndex<11&&i.dataIndex===0)&&!(i.datasetIndex===12&&i.dataIndex%3!==1),callbacks:{label:q=>(q.dataset.label?q.dataset.label+': ':'')+q.parsed.x.toFixed(0)+' m, '+q.parsed.y.toFixed(1)+' dBm'}}},
+  scales:{x:{min:0,max:3000,grid:{color:GR},title:{display:true,font:{size:14.5,weight:'600'},text:'Range (m)'}},
+          y:{min:-140,max:-20,grid:{color:GR},ticks:{stepSize:10,autoSkip:false},title:{display:true,font:{size:14.5,weight:'600'},text:'dBm per FFT bin'}}}},plugins:[tipPlugin]});
+const fmt=(x,d)=>isFinite(x)?x.toFixed(d):'—';
+function niceZoom(x0,x1,y0,y1){
+  const sx=x1-x0,qx=sx>200?10:sx>20?1:0.1,qy=(y1-y0)>20?1:0.1;
+  return{x0:Math.floor(x0/qx)*qx,x1:Math.ceil(x1/qx)*qx,y0:Math.floor(y0/qy)*qy,y1:Math.ceil(y1/qy)*qy};
+}
+function initZoom(){
+  const cv=$('c2'),box=el('div','zbox');cv.parentElement.appendChild(box);let st=null;
+  const pos=e=>{const r=cv.getBoundingClientRect(),ca=c2.chartArea;return{x:Math.min(Math.max(e.clientX-r.left,ca.left),ca.right),y:Math.min(Math.max(e.clientY-r.top,ca.top),ca.bottom),inside:e.clientX-r.left>=ca.left&&e.clientX-r.left<=ca.right&&e.clientY-r.top>=ca.top&&e.clientY-r.top<=ca.bottom};};
+  let dt=null;
+  cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;const p=pos(e);const bi=boxHit(c2,p.x,p.y);
+    if(bi>=0){const b=c2.$tips[bi]._box;dt={box:bi,gx:p.x-b.x,gy:p.y-b.y};cv.setPointerCapture(e.pointerId);return;}
+    const hi=tipHit(c2,p.x,p.y);
+    if(hi>=0){dt={i:hi,x:p.x,y:p.y,moved:false};cv.setPointerCapture(e.pointerId);return;}
+    if(!p.inside)return;st={x:p.x,y:p.y,cx:p.x,cy:p.y};cv.setPointerCapture(e.pointerId);
+    Object.assign(box.style,{display:'block',left:p.x+'px',top:p.y+'px',width:'0px',height:'0px'});});
+  cv.addEventListener('pointermove',e=>{if(dt&&dt.box!=null){const r=cv.getBoundingClientRect();boxMove(c2,dt.box,e.clientX-r.left-dt.gx,e.clientY-r.top-dt.gy);return;}
+    if(dt){const p=pos(e);if(!dt.moved&&Math.hypot(p.x-dt.x,p.y-dt.y)<3)return;dt.moved=true;tipDrag(c2,dt.i,p.x,p.y);return;}
+    if(!st)return;const p=pos(e);st.cx=p.x;st.cy=p.y;
+    Object.assign(box.style,{left:Math.min(p.x,st.x)+'px',top:Math.min(p.y,st.y)+'px',width:Math.abs(p.x-st.x)+'px',height:Math.abs(p.y-st.y)+'px'});});
+  const end=()=>{if(dt){const d=dt;dt=null;if(d.box!=null)return;if(!d.moved){c2.$tips.splice(d.i,1);c2.update('none');}return;}
+    if(!st)return;box.style.display='none';const s=st;st=null;
+    if(Math.abs(s.cx-s.x)<6&&Math.abs(s.cy-s.y)<6){toggleTip(c2,s.x,s.y);return;}
+    if(Math.abs(s.cx-s.x)<6||Math.abs(s.cy-s.y)<6)return;
+    const X=c2.scales.x,Y=c2.scales.y,xa=X.getValueForPixel(s.x),xb=X.getValueForPixel(s.cx),ya=Y.getValueForPixel(s.y),yb=Y.getValueForPixel(s.cy);
+    ZOOM=niceZoom(Math.min(xa,xb),Math.max(xa,xb),Math.min(ya,yb),Math.max(ya,yb));update();};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',()=>{st=null;dt=null;box.style.display='none';});
+  cv.addEventListener('contextmenu',e=>{e.preventDefault();if(ZOOM){ZOOM=null;update();}});
+  cv.addEventListener('wheel',e=>{
+    const p=pos(e);if(!p.inside)return;e.preventDefault();
+    const X=c2.scales.x,Y=c2.scales.y,cx=X.getValueForPixel(p.x),cy=Y.getValueForPixel(p.y),f=e.deltaY<0?0.8:1.25;
+    const rmax=val('rmax');let x0=cx-(cx-X.min)*f,x1=cx+(X.max-cx)*f,y0=cy-(cy-Y.min)*f,y1=cy+(Y.max-cy)*f;
+    if(x1-x0>=rmax&&y1-y0>=120){ZOOM=null;}else{x0=Math.max(0,x0);x1=Math.min(rmax,x1);y0=Math.max(-200,y0);y1=Math.min(40,y1);ZOOM=niceZoom(x0,x1,y0,y1);}
+    update();},{passive:false});
+}
+const DMAP={'Active ramp':'d-tact','Chirp slope':'d-slope','Beat per meter':'d-kpm','Beat @ max. range':'d-fbmax','Observation time (max.)':'d-tobs','Effective BW (max.)':'d-beff','Range resolution (best)':'d-dr','FFT bin':'d-bin','HPF corner (2nd order)':'d-hpf','PRF':'d-prf','Max. velocity':'d-vmax','Velocity resolution':'d-dv','Doppler gain':'d-gd','Leakage delay':'d-corr'};
+let LIVE={};
+function fillLive(){document.querySelectorAll('#drawer [data-k]').forEach(e=>{e.textContent=(e.dataset.k in LIVE)?LIVE[e.dataset.k]:'—';});}
+function openDoc(id){
+  const dr=$('drawer');dr.classList.add('open');dr.setAttribute('aria-hidden','false');fillLive();
+  const s=id&&$(id);if(s){s.scrollIntoView({block:'start'});s.classList.add('flash');setTimeout(()=>s.classList.remove('flash'),60);}
+}
+function closeDoc(){const dr=$('drawer');dr.classList.remove('open');dr.setAttribute('aria-hidden','true');}
+function bracketH(ctx,x0,x1,y,txt,above){
+  ctx.beginPath();ctx.moveTo(x0,y-4);ctx.lineTo(x0,y+4);ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.moveTo(x1,y-4);ctx.lineTo(x1,y+4);ctx.stroke();
+  const tw=ctx.measureText(txt).width;
+  if(tw+6<x1-x0){ctx.textAlign='center';ctx.fillText(txt,(x0+x1)/2,above?y-6:y+14);}
+  else{ctx.textAlign='left';ctx.fillText(txt,x1+5,y+4);}
+}
+const chirpAnno={id:'chirpAnno',
+  beforeDatasetsDraw(ch){const a=ch.$anno;if(!a)return;const{ctx,chartArea:ca,scales:{x}}=ch;ctx.save();ctx.fillStyle='rgba(79,195,247,0.16)';
+    for(let n=0;n<3;n++){const x0=Math.max(n*a.Tp+a.tb,0),x1=Math.min(n*a.Tp+a.Ta,a.tE);if(x1<=x0)continue;
+      const p0=x.getPixelForValue(x0),p1=x.getPixelForValue(x1);ctx.fillRect(p0,ca.top,p1-p0,ca.bottom-ca.top);}
+    ctx.restore();},
+  afterDatasetsDraw(ch){const a=ch.$anno;if(!a)return;const{ctx,chartArea:ca,scales:{x,y}}=ch;ctx.save();
+    ctx.strokeStyle='#EEF2F7';ctx.fillStyle='#EEF2F7';ctx.lineWidth=1.2;ctx.font="600 12.5px 'Barlow Semi Condensed',system-ui,sans-serif";
+    const X=t=>x.getPixelForValue(t),Y=f=>y.getPixelForValue(f);
+    const bx=ca.left+12,y0=Y(0),y1=Y(a.BW);
+    ctx.beginPath();ctx.moveTo(bx,y0);ctx.lineTo(bx,y1);ctx.moveTo(bx-4,y0);ctx.lineTo(bx+4,y0);ctx.moveTo(bx-4,y1);ctx.lineTo(bx+4,y1);ctx.stroke();
+    ctx.textAlign='left';ctx.fillText('BW '+fmt(a.BW,a.BW<10?2:1)+' MHz',bx+7,(y0+y1)/2+4);
+    const yA=ca.top-31,yB=ca.top-9,yb=ca.bottom-8;
+    bracketH(ctx,X(0),X(a.Tp),yA,'Chirp period '+fmt(a.Tp,1)+' µs',true);
+    ctx.strokeStyle='#7FD3F7';ctx.fillStyle='#BFE7FB';
+    bracketH(ctx,X(a.tb),X(a.Ta),yB,(a.tb>0?'Sampling '+fmt(a.Ta-a.tb,1)+' µs, settle '+fmt(a.tb,1)+' µs':'Sampling window '+fmt(a.Ta-a.tb,1)+' µs'),true);
+    ctx.strokeStyle='#EEF2F7';ctx.fillStyle='#EEF2F7';
+    bracketH(ctx,X(0),X(a.Ta),yb,'Active ramp '+fmt(a.Ta,1)+' µs',true);
+    if(a.Tr>0)bracketH(ctx,X(a.Ta),X(a.Tp),yb,'Reset '+fmt(a.Tr,1)+' µs',true);
+    ctx.restore();}};
+initZoom();
+const c3=new Chart($('c3'),{type:'scatter',data:{datasets:[
+  Object.assign(line('#8EC5FF',[],2),{label:'TX'})
+].concat(OBJ.map(o=>Object.assign(line(o.k==='r'?'#F2D23C':'#6EE7A8',[6,4],1.5),{label:o.name+' echo'})))},
+options:{animation:false,responsive:true,maintainAspectRatio:false,layout:{padding:{top:46,right:8}},
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:q=>q.dataset.label+': '+q.parsed.x.toFixed(2)+' µs, '+q.parsed.y.toFixed(2)+' MHz'}}},
+  scales:{x:{min:0,max:130,grid:{color:GR},title:{display:true,font:{size:14.5,weight:'600'},text:'Time (µs)'}},
+          y:{min:-12,max:118,grid:{color:GR},ticks:{callback:function(v){const a=this.chart.$anno;return a&&(v<-1e-9||v>a.BW+1e-9)?'':v;}},title:{display:true,font:{size:14.5,weight:'600'},text:'Δf (MHz)'}}}},
+  plugins:[chirpAnno,tipPlugin]});
+c1.$fmt=(x,y)=>['Offset: '+fmtF(x),'L: '+y.toFixed(1)+' dBc/Hz'];
+c2.$fmt=(x,y)=>['R: '+(+x.toFixed(2))+' m  ('+fmtF(x*(c2.$k||0))+')','P: '+y.toFixed(1)+' dBm'];
+c3.$fmt=(x,y)=>['t: '+x.toFixed(2)+' µs','Δf: '+y.toFixed(2)+' MHz'];
+c1.$snap=snapLog;
+c2.$snap=x=>{const s=c2.scales.x,span=s.max-s.min;return snapLin(x,span>200?5:niceStep(span/100));};
+c3.$snap=x=>snapLin(x,0.1);
+attachTips(c1,$('c1'));attachTips(c3,$('c3'));
+function noteButtons(){[['c4',c4]].forEach(([id,ch])=>{if(!ch)return;const ttl=$(id).closest('.panel').querySelector('.ttl');if(!ttl||ttl.querySelector('.nbtn'))return;
+  const b=el('button','nbtn','+ Note');b.type='button';b.title='Add a text note to this chart (or double-click the chart)';b.addEventListener('pointerdown',ev=>ev.stopPropagation());b.addEventListener('click',ev=>{ev.stopPropagation();addNote(ch);});
+  ttl.insertBefore(b,ttl.querySelector('small'));
+  $(id).addEventListener('dblclick',ev=>{const r=$(id).getBoundingClientRect(),x=ev.clientX-r.left,y=ev.clientY-r.top,ca=ch.chartArea;if(x<ca.left||x>ca.right||y<ca.top||y>ca.bottom)return;if(tipHit(ch,x,y)>=0||boxHit(ch,x,y)>=0)return;addNote(ch,x,y);});});}
+function persist(){
+  try{
+    const f={};Object.keys(SPEC).forEach(id=>f[id]=$(id).value);
+    localStorage.setItem(KEY,JSON.stringify({f,on:ON,base}));
+  }catch(e){}
+}
+function status(list){
+  if(!list.length)list=[['ok','No warnings.']];
+  $('st').innerHTML=list.map(m=>`<p class="${m[0]}"><i></i>${m[1]}</p>`).join('');
+}
+function syncSelects(){
+  const lb=parseFloat($('lbw').value);const m=LBP.find(p=>Math.abs(+p[0]-lb)<1e-9);$('lbsel').value=m?m[0]:'';
+  OBJ.forEach(o=>{const s=parseFloat($(o.id+'S').value);const i=RCSP.findIndex(p=>p[1]===s);$(o.id+'P').value=i>=0?String(i):'';});
+}
+function core(v){
+  const m={fc:v.lbw*1e3,aI:v.ain,aO:v.aout};
+  const lam=c0/(v.fc*1e9),Tp=v.tp*1e-6,Tact=(v.tp-v.tr)*1e-6,Tfull=Tact-v.tb*1e-6;
+  const scl=20*lg(v.fc/FREF);
+  if(!(Tfull>=2e-6))return null;
+  const S=v.bw*1e6/Tact,k=2*S/c0,fbmax=k*v.rmax,N=Math.round(v.nc),w=Math.round(v.win),cor=v.cor===1;
+  const Bbin=1/Tfull,vmax=lam/(4*Tp),dv=lam/(2*N*Tp),fh=v.rmin*k;
+  const H=f=>fh>0?-10*lg(1+Math.pow(fh/Math.max(f,1),4)):0;
+  const Teff=R=>Math.max(Tfull-2*R/c0,1e-9),gT=R=>Math.min(1,Teff(R)/Tfull);
+  const tauL=(v.lk/100)/c0,RL=tauL*c0/2;
+  const Lrf=f=>Leff(f,base,m.fc,m.aI,m.aO)+scl;
+  const bdb=10*lg(Bbin)+ENB[w];
+  const Nadc=v.afs-v.asnr-10*lg(v.afsr*1e6/2)-v.grf+bdb;
+  const Nrf=f=>-174+v.nf+bdb+10*lg(1+v.fk*1e3/Math.max(f,1));
+  const Pr=(R,s)=>v.ptx+2*v.ga+20*lg(lam)-30*lg(4*Math.PI)+s-40*lg(Math.max(R,1));
+  const objs=[{id:'leak',name:'Leakage',R:RL,P:v.ptx-v.iso,tau:tauL,g:1}];
+  OBJ.forEach(o=>{if(!ON[o.id])return;const R=v[o.id+'R'];objs.push({id:o.id,name:o.name,k:o.k,R,P:Pr(R,v[o.id+'S']),tau:2*R/c0,g:gT(R)});});
+  const sps=SPUR.filter(s=>ON[s.id]).map(s=>({id:s.id,name:s.name,fr:v[s.id+'T']===1,f0:v[s.id+'F']*1e3,L:v[s.id+'L']+scl}));
+  const Dc=(f,tau)=>cor?10*lg(Math.max(4*Math.pow(Math.sin(Math.PI*f*tau),2),1e-12)):3;
+  const ghosts=[],peds=[];
+  objs.forEach(x=>sps.forEach(s=>{
+    const span=S*Tfull*x.g;
+    if(s.fr&&span>Bbin){peds.push({x,s,span});return;}
+    const f0=s.fr?s.f0+span/2:s.f0,fx=x.R*k;
+    [1,-1].forEach(sg=>ghosts.push({R:Math.abs(fx+sg*f0)/k,P:x.P+s.L+Dc(f0,x.tau)+20*lg(x.g),g:x.g,src:x,s}));
+  }));
+  function spurAt(fr,Hr){
+    const a=[];
+    for(const gs of ghosts){if(Math.abs(fr-gs.R*k)<Bbin/gs.g)a.push(gs.P+Hr);}
+    for(const pd of peds){
+      const fx=pd.x.R*k,f0=pd.s.f0,spd=10*lg(Math.max(pd.span/Bbin,1));
+      for(const t of [fr-fx-f0,fx-f0-fr,fr+fx-f0]){
+        if(t>=0&&t<=pd.span)a.push(pd.x.P+pd.s.L+Dc(f0+t,pd.x.tau)+20*lg(pd.x.g)-spd+Hr);
+      }
+    }
+    return a.length?ps(...a):-400;
+  }
+  function point(r){
+    let pk=-400;const pn=[],sd=[];const fr=r*k,Hr=H(fr);
+    for(const x of objs){
+      const df=Math.abs(r-x.R)*k,Hx=H(x.R*k),bw=Bbin/x.g,gc=20*lg(x.g);
+      if(df<bw){pk=Math.max(pk,x.P+Hx+gc);continue;}
+      const D=cor?10*lg(Math.max(4*Math.pow(Math.sin(Math.PI*df*x.tau),2),1e-12)):3;
+      pn.push(x.P+Lrf(df)+D+bdb+Hr+10*lg(x.g));
+      sd.push(x.P+Hx+gc+W(df/bw,w));
+    }
+    const spur=spurAt(fr,Hr);
+    const rfN=Nrf(fr)+Hr,therm=ps(rfN,Nadc),noise=ps(therm,...pn),clut=ps(noise,...sd,spur);
+    return{Hr,rfN,adcN:Nadc,therm,pn:pn.length?ps(...pn):-400,sd:sd.length?ps(...sd):-400,spur,noise,clut,tot:Math.max(clut,pk)};
+  }
+  function tgt(id){const x=objs.find(q=>q.id===id);if(!x)return null;const T=point(x.R),Pd=x.P+T.Hr+20*lg(x.g);
+    return{x,T,Pd,s1:Pd-T.clut,sD:Pd-T.noise+10*lg(N),loss:T.noise-T.therm,te:Teff(x.R),enf:T.therm-T.Hr-(-174+bdb)};}
+  const adcP=ps(...objs.map(x=>x.P+H(x.R*k)+v.grf)),rfP=ps(...objs.map(x=>x.P));
+  return{m,lam,Tp,Tact,Tfull,scl,S,k,fbmax,N,w,cor,Bbin,vmax,dv,fh,H,Teff,gT,tauL,RL,Lrf,bdb,Nadc,Nrf,Pr,objs,sps,Dc,ghosts,peds,spurAt,point,tgt,adcP,mg:v.afs-adcP,rfP,rmg:v.p1-rfP};
+}
+function update(){
+  document.querySelectorAll('.f input.dirty').forEach(e=>e.classList.remove('dirty'));
+  const v={};Object.keys(SPEC).forEach(id=>v[id]=val(id));
+  syncSelects();
+  OBJ.forEach(o=>{const on=ON[o.id];$('tg-'+o.id).setAttribute('aria-pressed',on?'true':'false');$('o-'+o.id).classList.toggle('off',!on);
+    $(o.id+'R').disabled=!on;$(o.id+'S').disabled=!on;$(o.id+'P').disabled=!on;});
+  SPUR.forEach(s=>{const on=ON[s.id];$('tg-'+s.id).setAttribute('aria-pressed',on?'true':'false');$('sr-'+s.id).classList.toggle('off',!on);
+    [s.id+'T',s.id+'F',s.id+'L'].forEach(i=>$(i).disabled=!on);});
+  const m={fc:v.lbw*1e3,aI:v.ain,aO:v.aout};
+  OFF.forEach((f,i)=>{$('pn'+i).value=(Leff(f,base,m.fc,m.aI,m.aO)+20*lg(v.fc/FREF)).toFixed(1);});
+  persist();
+  const msgs=[];
+  const scl=20*lg(v.fc/FREF);
+  $('pnscl').textContent=(scl>=0?'+':'')+fmt(scl,2);
+  $('pnhdr').textContent=`Phase noise at ${fmt(v.fc,3)} GHz; reference and spur levels at ${FREF} GHz`;
+  const C=core(v);
+  if(!C){status([['err','Reset and PLL settling time leave less than 2 µs of usable ramp. Lengthen the chirp period.']]);return;}
+  const {lam,Tp,Tact,Tfull,S,k,fbmax,N,w,cor,Bbin,vmax,dv,fh,H,Teff,gT,tauL,RL,Lrf,bdb,Nadc,Nrf,Pr,objs,sps,Dc,ghosts,peds,spurAt,point}=C;
+  const der=[
+    ['Active ramp',fmt(Tact*1e6,1)+' µs'],['Chirp slope',fmt(S/1e12,3)+' MHz/µs'],
+    ['Beat per meter',fmt(k/1e3,2)+' kHz/m'],['Beat @ max. range',fmt(fbmax/1e6,2)+' MHz'],
+    ['Observation time (max.)',fmt(Tfull*1e6,1)+' µs'],['Effective BW (max.)',fmt(S*Tfull/1e6,1)+' MHz'],
+    ['Range resolution (best)',fmt(c0/(2*S*Tfull),2)+' m'],['FFT bin',fmt(Bbin/1e3,2)+' kHz'],
+    ['HPF corner (2nd order)',fmt(fh/1e3,0)+' kHz'],['PRF',fmt(1/Tp/1e3,2)+' kHz'],
+    ['Max. velocity','±'+fmt(vmax,1)+' m/s ('+fmt(vmax*3.6,0)+' km/h)'],['Velocity resolution',fmt(dv,3)+' m/s'],
+    ['Doppler gain',fmt(10*lg(N),1)+' dB'],
+    ['Leakage delay',fmt(tauL*1e9,2)+' ns']
+  ];
+  $('der').innerHTML=der.map(d=>`<div data-doc="${DMAP[d[0]]||'d-tact'}" title="How is this calculated?"><span>${d[0]}</span><b>${d[1]}</b></div>`).join('');
+  const ZX0=ZOOM?ZOOM.x0:0,ZX1=ZOOM?ZOOM.x1:v.rmax,inZ=r=>r>=ZX0&&r<=ZX1;
+  const n=800,Rs=[];for(let i=0;i<=n;i++)Rs.push(ZX0+(ZX1-ZX0)*i/n);
+  objs.forEach(x=>{if(inZ(x.R))Rs.push(x.R);});ghosts.forEach(g=>{if(inZ(g.R))Rs.push(g.R);});Rs.sort((a,b)=>a-b);
+  const res=Rs.map(point);
+  const fx=[];for(let i=0;i<=140;i++)fx.push(Math.pow(10,2+i*5.477/140));
+  c1.data.datasets[0].data=fx.map(f=>({x:f,y:Lrf(f)}));
+  c1.data.datasets[1].data=OFF.map((f,i)=>({x:f,y:MEAS[i]+scl}));
+  c1.data.datasets[2].data=OFF.map(f=>({x:f,y:Lrf(f)}));
+  c1.data.datasets[3].data=[{x:m.fc,y:-150},{x:m.fc,y:-60}];
+  const refl=objs.filter(x=>x.k==='r').sort((a,b)=>b.P-a.P)[0];
+  const refC=refl||objs[0];
+  const env=(f,tau)=>{if(!cor)return 3;const x=2*Math.PI*f*tau;return 10*lg(x*x/(1+x*x/2));};
+  c1.data.datasets[4].data=fx.map(f=>({x:f,y:Lrf(f)+env(f,refC.tau)}));
+  const tg=objs.filter(x=>x.k==='t');
+  for(let j=0;j<3;j++){const t=tg[j];const d=t?Math.abs(t.R-refC.R)*k:0;c1.data.datasets[5+j].data=(d>0)?[{x:d,y:-150},{x:d,y:-60}]:[];}
+  c1.data.datasets[8].data=sps.filter(s=>!s.fr&&s.f0>=100).flatMap(s=>[{x:s.f0,y:-150},{x:s.f0,y:s.L},{x:s.f0,y:null}]);
+  c1.data.datasets[9].data=sps.filter(s=>s.fr&&s.f0>=100).flatMap(s=>[{x:s.f0,y:-150},{x:s.f0,y:s.L},{x:s.f0+S*Tfull,y:s.L},{x:s.f0+S*Tfull,y:null}]);
+  c1.update();
+  $('t1').textContent=`${fmt(v.fc,3)} GHz, ${Math.abs(scl)<0.05?'0.0':(scl>0?'+':'')+fmt(scl,1)} dB vs. ref.`;
+  c2.$k=k;
+  c2.options.scales.x.min=ZX0;c2.options.scales.x.max=ZX1;
+  c2.options.scales.y.min=ZOOM?ZOOM.y0:-140;c2.options.scales.y.max=ZOOM?ZOOM.y1:-20;
+  c2.options.scales.y.ticks.stepSize=ZOOM?undefined:10;c2.options.scales.y.ticks.autoSkip=!!ZOOM;
+  c2.data.datasets[0].data=res.map((p,i)=>({x:Rs[i],y:p.tot}));
+  c2.data.datasets[1].data=res.map((p,i)=>({x:Rs[i],y:p.therm}));
+  c2.data.datasets[2].data=res.map((p,i)=>({x:Rs[i],y:Math.max(p.pn,-250)}));
+  c2.data.datasets[3].data=res.map((p,i)=>({x:Rs[i],y:Math.max(p.sd,-250)}));
+  c2.data.datasets[4].data=[{x:v.rmin,y:-200},{x:v.rmin,y:40}];
+  OBJ.forEach((o,j)=>{const x=objs.find(q=>q.id===o.id);
+    c2.data.datasets[5+j].data=x?[{x:x.R,y:-140},{x:x.R,y:Math.max(x.P+H(x.R*k)+20*lg(x.g),-140)}]:[];});
+  c2.data.datasets[11].data=res.map((p,i)=>({x:Rs[i],y:Math.max(p.spur,-250)}));
+  c2.data.datasets[12].data=ghosts.filter(g=>g.R<=v.rmax&&g.P+H(g.R*k)>-139).flatMap(g=>[{x:g.R,y:-140},{x:g.R,y:Math.max(g.P+H(g.R*k),-140)},{x:g.R,y:null}]);
+  c2.update();
+  {
+    const Tpu=v.tp,Tau=v.tp-v.tr,BW=v.bw,tE=1.3*Tpu;
+    const fAt=t=>{const tm=((t%Tpu)+Tpu)%Tpu;return tm<Tau?BW*tm/Tau:(v.tr>0?BW*(1-(tm-Tau)/v.tr):0);};
+    const saw=sh=>{const pts=[];for(let n=-2;n<=2;n++){const b0=n*Tpu+sh;pts.push({x:b0,y:0},{x:b0+Tau,y:BW});}pts.push({x:3*Tpu+sh,y:0});
+      const out=[{x:0,y:fAt(-sh)}];for(const q of pts){if(q.x>0&&q.x<tE)out.push(q);}out.push({x:tE,y:fAt(tE-sh)});return out;};
+    c3.$anno={Tp:Tpu,Ta:Tau,Tr:v.tr,tb:v.tb,BW,tE};
+    c3.options.scales.x.max=tE;c3.options.scales.y.min=-0.17*BW;c3.options.scales.y.max=1.06*BW;
+    c3.data.datasets[0].data=saw(0);
+    OBJ.forEach((o,j)=>{const x=objs.find(q=>q.id===o.id);c3.data.datasets[1+j].data=x?saw(x.tau*1e6):[];});
+    c3.update();
+    const far=objs.filter(x=>x.id!=='leak').sort((a,b)=>b.tau-a.tau)[0];
+    $('t3').textContent=`${fmt(S/1e12,3)} MHz/µs`+(far?`, max. delay ${fmt(far.tau*1e6,2)} µs`:'');
+  }
+  $('t2').textContent=`bin ${fmt(Bbin/1e3,1)} kHz, ${['rectangular','Hann','Blackman','Blackman-Harris'][w]} window`;
+  let rows='';const tRes=[];
+  OBJ.filter(o=>o.k==='t').forEach(o=>{
+    const x=objs.find(q=>q.id===o.id);
+    if(!x){rows+=`<tr class="off"><td>${o.name}</td><td>off</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;return;}
+    const T=point(x.R),Pd=x.P+T.Hr+20*lg(x.g),s1=Pd-T.clut,sD=Pd-T.noise+10*lg(N),loss=T.noise-T.therm,te=Teff(x.R);
+    tRes.push({x,T,loss,te});
+    rows+=`<tr><td>${o.name}</td><td>${fmt(x.R,0)} m</td><td>${fmt(x.P,1)} dBm</td><td>${fmt(te*1e6,1)} µs</td><td>${fmt(c0/(2*S*te),2)} m</td><td class="${s1<0?'neg':''}">${fmt(s1,1)} dB</td><td class="${sD<13?'neg':''}">${fmt(sD,1)} dB</td><td class="${loss>3?'neg':''}">${fmt(loss,1)} dB</td></tr>`;
+  });
+  const Rref=Math.min(v.rmax,Math.max(v.rmin*2,v.rmax/2)),ref0=point(Rref);
+  const enf=tRes.length?tRes[0].T.therm-tRes[0].T.Hr-(-174+bdb):ref0.therm-ref0.Hr-(-174+bdb);
+  const adcP=ps(...objs.map(x=>x.P+H(x.R*k)+v.grf)),mg=v.afs-adcP;
+  const rfP=ps(...objs.map(x=>x.P)),rmg=v.p1-rfP;
+  $('mk').innerHTML=`<table><thead><tr><th>Target</th><th data-doc="d-pr">Range</th><th data-doc="d-pr">Power @ RX</th><th data-doc="d-tobs">Obs. time</th><th data-doc="d-dr">ΔR</th><th data-doc="d-snr1">SNR, 1 chirp</th><th data-doc="d-snrd">SNR, Doppler</th><th data-doc="d-pnloss">Phase noise loss</th></tr></thead><tbody>${rows}</tbody></table>`;
+  {
+    const TT=tRes.length?tRes[0].T:ref0,where=tRes.length?`${tRes[0].x.name}, ${fmt(tRes[0].x.R,0)} m`:`${fmt(Rref,0)} m, no target`;
+    const pc=x=>{const q=100*Math.pow(10,(x-TT.noise)/10);return q<0.1?'&lt;0.1':q<10?q.toFixed(1):q.toFixed(0);};
+    const it=(doc,lab,val,cls)=>`<div class="it ${cls||''}" data-doc="${doc}"><span>${lab}</span><b>${val}</b></div>`;
+    const pnv=TT.pn>-300?TT.pn:-Infinity;
+    $('side').innerHTML=`<div class="sh2">Noise budget<small>in one FFT bin @ ${where}</small></div>`+
+      it('d-pnloss','Total noise <i>(RF + ADC + phase noise)</i>',fmt(TT.noise,1)+' dBm','big')+
+      it('d-floor','Thermal floor <i>(RF + ADC)</i>',fmt(TT.therm,1)+' dBm')+
+      it('d-floor','RF noise <i>(kT, NF, flicker)</i>',fmt(TT.rfN,1)+` dBm<small>${pc(TT.rfN)}%</small>`,'sub')+
+      it('d-floor','ADC noise <i>(FS, SNR, f<sub>s</sub>, RF gain)</i>',fmt(TT.adcN,1)+` dBm<small>${pc(TT.adcN)}%</small>`,'sub')+
+      it('d-corr','Phase noise skirts <i>(leakage + objects)</i>',(isFinite(pnv)?fmt(pnv,1)+' dBm':'—')+`<small>${isFinite(pnv)?pc(pnv):'0'}%</small>`,'sub')+
+      '<div class="sp2"></div>'+
+      it('d-enf','Effective NF',fmt(enf,2)+' dB')+
+      it('d-adc','ADC headroom',fmt(mg,1)+' dB')+
+      it('d-p1','RF P1dB headroom',fmt(rmg,1)+' dB');
+    $('side').querySelectorAll('.it').forEach(e=>{const b=e.querySelector('b');if(e.dataset.doc==='d-adc'&&mg<0)b.classList.add('neg');if(e.dataset.doc==='d-p1'&&rmg<3)b.classList.add('neg');});
+  }
+  if(mg<0)msgs.push(['err',`ADC saturates (${fmt(-mg,1)} dB over full scale). Reduce RF gain or raise the minimum range.`]);
+  if(rmg<0)msgs.push(['err',`RF chain compressed: total input power is ${fmt(-rmg,1)} dB above input P1dB.`]);
+  else if(rmg<3)msgs.push(['warn',`RF input within ${fmt(rmg,1)} dB of P1dB; expect gain compression and intermodulation.`]);
+  if(fbmax>v.afsr*1e6/2)msgs.push(['warn',`Beat at max. range (${fmt(fbmax/1e6,2)} MHz) exceeds Nyquist (${fmt(v.afsr/2,1)} MHz).`]);
+  else if(fbmax>0.8*v.afsr*1e6/2)msgs.push(['info',`Beat at max. range is ${fmt(100*fbmax/(v.afsr*1e6/2),0)}% of Nyquist; little room for the anti-aliasing filter.`]);
+  const far=objs.filter(x=>x.id!=='leak').sort((a,b)=>b.tau-a.tau)[0];
+  if(far&&far.tau>v.tb*1e-6){const fg=S*(Tp-far.tau);msgs.push([fg<v.afsr*1e6/2?'warn':'info',`${far.name}: first ${fmt(far.tau*1e6,1)} µs of the window carry the previous chirp tail, beating at ~${fmt(fg/1e6,1)} MHz; ${fg<v.afsr*1e6/2?'this is inside the Nyquist band and can create ghosts':'the anti-aliasing filter must reject it'}.`]);}
+  objs.filter(x=>x.id!=='leak'&&x.tau>v.tb*1e-6&&x.P+H(x.R*k)>ps(Nrf(x.R*k),Nadc)+40).forEach(x=>msgs.push(['warn',`${x.name}: its reset echo falls inside the sampling window and raises a broadband floor (not modeled).`]));
+  objs.filter(x=>x.id!=='leak'&&x.R>v.rmax).forEach(x=>msgs.push(['warn',`${x.name} is beyond max. range and is not shown.`]));
+  tRes.forEach(r=>{
+    if(r.x.R<v.rmin)msgs.push(['info',`${r.x.name} is below min. range; the HPF attenuates it by ${fmt(-r.T.Hr,1)} dB.`]);
+    if(objs.some(q=>q!==r.x&&Math.abs(q.R-r.x.R)*k<2*Bbin/r.x.g))msgs.push(['warn',`${r.x.name} shares an FFT bin with another object and is not resolved.`]);
+    if(r.loss>3)msgs.push(['info',`${r.x.name} is phase-noise limited (${fmt(r.loss,1)} dB). More TX power will not improve its SNR.`]);
+  });
+  ghosts.filter(g=>g.R<=v.rmax).map(g=>({g,m:g.P+H(g.R*k)-point(g.R).noise})).filter(o=>o.m>10).sort((a,b)=>b.m-a.m).slice(0,3).forEach(({g,m})=>{
+    msgs.push(['warn',`${g.s.name} × ${g.src.name}: ghost at ${fmt(g.R,0)} m, ${fmt(m,1)} dB above the floor; ${g.src.k==='t'?'it moves with the target and survives Doppler processing':'stationary, removed by Doppler processing'}.`]);});
+  if(enf-v.nf>1)msgs.push(['info',`ADC noise and IF flicker degrade the effective NF by ${fmt(enf-v.nf,1)} dB.`]);
+  {
+    const t0=tRes[0],nm=n=>n;
+    LIVE={Tp:fmt(v.tp,1)+' µs',Tr:fmt(v.tr,1)+' µs',Tact:fmt(Tact*1e6,1)+' µs',B:fmt(v.bw,1)+' MHz',S:fmt(S/1e12,3)+' MHz/µs',
+      k:fmt(k/1e3,2)+' kHz/m',Rmax:fmt(v.rmax,0)+' m',fbmax:fmt(fbmax/1e6,2)+' MHz',nyq:fmt(v.afsr/2,1)+' MHz',
+      Tobs:fmt(Tfull*1e6,1)+' µs',Beff:fmt(S*Tfull/1e6,1)+' MHz',dR:fmt(c0/(2*S*Tfull),2)+' m',Bbin:fmt(Bbin/1e3,2)+' kHz',bindb:fmt(10*lg(Bbin),1)+' dB-Hz',
+      Rmin:fmt(v.rmin,0)+' m',fh:fmt(fh/1e3,1)+' kHz',prf:fmt(1/Tp/1e3,2)+' kHz',lam:fmt(lam*1e3,2)+' mm',
+      vmax:'±'+fmt(vmax,1)+' m/s ('+fmt(vmax*3.6,0)+' km/h)',dv:fmt(dv,3)+' m/s',GD:fmt(10*lg(N),1)+' dB (N = '+N+')',
+      Pl:fmt(v.ptx-v.iso,1)+' dBm',lbw:fmt(v.lbw,0)+' kHz',ain:(v.ain>=0?'+':'')+fmt(v.ain,1)+' dB',aout:(v.aout>=0?'+':'')+fmt(v.aout,1)+' dB',scl:(scl>=0?'+':'')+fmt(scl,2)+' dB',
+      adcd:fmt(v.afs-v.asnr-10*lg(v.afsr*1e6/2),1)+' dBm/Hz',adci:fmt(v.afs-v.asnr-10*lg(v.afsr*1e6/2)-v.grf,1)+' dBm/Hz',rfd:fmt(-174+v.nf,1)+' dBm/Hz',
+      nrfb:fmt(-174+v.nf+bdb,1)+' dBm',nadcb:fmt(Nadc,1)+' dBm',win:['Rectangular','Hann','Blackman','Blackman-Harris'][w]+', ENBW '+fmt(ENB[w],2)+' dB',
+      enf:fmt(enf,2)+' dB',adcP:fmt(adcP,1)+' dBm',adcm:fmt(mg,1)+' dB',rfP:fmt(rfP,1)+' dBm',rfm:fmt(rmg,1)+' dB'};
+    {
+      const Re=t0?t0.x.R:Math.min(v.rmax,Math.max(v.rmin*2,v.rmax/2)),fe=Re*k,flk=10*lg(1+v.fk*1e3/Math.max(fe,1)),He=H(fe);
+      const r1=-174+v.nf,r2=r1+10*lg(Bbin),r3=r2+ENB[w],r4=r3+flk,r5=r4+He;
+      const a1=v.afs-v.asnr,a2=a1-10*lg(v.afsr*1e6/2),a3=a2-v.grf,a4=a3+10*lg(Bbin)+ENB[w],sm=ps(r5,a4);
+      const db=x=>fmt(x,1).replace('-','−');
+      Object.assign(LIVE,{fl_where:(t0?t0.x.name+', ':'')+fmt(Re,0)+' m, beat frequency '+(fe>=1e6?fmt(fe/1e6,2)+' MHz':fmt(fe/1e3,1)+' kHz'),
+        fl1:'−174.0 dBm/Hz',fl2:db(r1)+' dBm/Hz',fl3:db(r2)+' dBm',fl4:db(r3)+' dBm',fl5:db(r4)+' dBm ('+(flk>=0?'+':'')+fmt(flk,2)+')',fl6:db(r5)+' dBm ('+fmt(He,2).replace('-','−')+')',
+        fa1:db(a1)+' dBm',fa2:db(a2)+' dBm/Hz',fa3:db(a3)+' dBm/Hz',fa4:db(a4)+' dBm',fsum:db(sm)+' dBm',
+        fdom:Math.abs(r5-a4)<3?'Both paths contribute about equally here.':(r5>a4?`The RF path dominates by ${fmt(r5-a4,1)} dB, so the receiver NF sets the floor.`:`The ADC path dominates by ${fmt(a4-r5,1)} dB: raise the RF gain, or accept a higher floor at this range.`)});
+    }
+    const none='Turn on a target in the Scene to see a worked example.';
+    if(t0){
+      const x=t0.x,T=t0.T,Pd=x.P+T.Hr+20*lg(x.g),o=OBJ.find(q=>q.id===x.id),sig=v[o.id+'S'];
+      LIVE.tline=`${x.name} at ${fmt(x.R,0)} m: τ = ${fmt(x.tau*1e6,2)} µs, T_eff = ${fmt(t0.te*1e6,1)} µs.`;
+      LIVE.prline=`${x.name}: ${fmt(v.ptx,1)} + 2×${fmt(v.ga,1)} + (${fmt(20*lg(lam),1)}) + (${fmt(sig,1)}) − 33.0 − ${fmt(40*lg(x.R),1)} = ${fmt(x.P,1)} dBm.`;
+      LIVE.gline=`${x.name}: g = ${fmt(x.g,3)} → tone ${fmt(20*lg(x.g),2)} dB, skirt ${fmt(10*lg(x.g),2)} dB.`;
+      const rr=refC,df=Math.abs(x.R-rr.R)*k,cf=cor?10*lg(Math.max(4*Math.pow(Math.sin(Math.PI*df*rr.tau),2),1e-12)):3;
+      LIVE.corrline=`${rr.name} → ${x.name}: Δf = ${fmt(df/1e3,1)} kHz, τ = ${fmt(rr.tau*1e6,3)} µs, factor = ${fmt(cf,1)} dB.`;
+      LIVE.snr1line=`${x.name}: ${fmt(Pd,1)} dBm − (${fmt(T.clut,1)} dBm) = ${fmt(Pd-T.clut,1)} dB`;
+      LIVE.snrdline=`${x.name}: ${fmt(Pd,1)} − (${fmt(T.noise,1)}) + ${fmt(10*lg(N),1)} = ${fmt(Pd-T.noise+10*lg(N),1)} dB`;
+      LIVE.pnlline=`${x.name}: ${fmt(T.noise,1)} − (${fmt(T.therm,1)}) = ${fmt(t0.loss,1)} dB.`;
+    }else{['tline','prline','gline','corrline','snr1line','snrdline','pnlline'].forEach(q=>LIVE[q]=none);}
+    if($('drawer').classList.contains('open'))fillLive();
+  }
+  status(msgs);
+}
+$('dopen').onclick=()=>{$('drawer').classList.contains('open')?closeDoc():openDoc(null);};
+$('dclose').onclick=closeDoc;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDoc();});
+document.addEventListener('click',e=>{
+  const a=e.target.closest('.toc a');if(a){e.preventDefault();openDoc(a.getAttribute('href').slice(1));}
+});
+document.addEventListener('pointerdown',e=>{
+  if(e.button!==0)return;
+  const t=e.target.closest('[data-doc]');if(t&&!t.closest('#drawer'))openDoc(t.dataset.doc);
+});
+
+const SWPAL=['#F2D23C','#4FC3F7','#6EE7A8','#FF9F43','#D46BD8','#FF7A7A','#8EC5FF','#C3E88D'];
+const DBU=['dB','dBm','dBi','dBc','dBc/Hz','dBsm'];
+function sweepParams(){
+  const L=[];const add=(id,label,unit)=>{if(SPEC[id])L.push({id,label,unit});};
+  G.radar.forEach(f=>add(f[0],f[1],f[2]));
+  add('lbw','Loop BW','kHz');add('ain','In-band phase noise offset','dB');add('aout','Out-of-band phase noise offset','dB');
+  G.rxL.forEach(f=>add(f[0],f[1],f[2]));G.rxR.forEach(f=>{if(f[0]!=='win')add(f[0],f[1],f[2]);});
+  OBJ.forEach(o=>{add(o.id+'R',o.name+' range','m');add(o.id+'S',o.name+' RCS','dBsm');});
+  SPUR.forEach(s=>{add(s.id+'F',s.name+' offset','kHz');add(s.id+'L',s.name+' level','dBc');});
+  return L;
+}
+const YQ=[
+  {g:'Noise (at the evaluation point)',id:'therm',l:'Thermal floor (RF + ADC)',u:'dBm',n:1,f:(C,P)=>P.therm},
+  {g:'Noise (at the evaluation point)',id:'rfN',l:'RF noise',u:'dBm',n:1,f:(C,P)=>P.rfN},
+  {g:'Noise (at the evaluation point)',id:'adcN',l:'ADC noise',u:'dBm',n:1,f:(C,P)=>P.adcN},
+  {g:'Noise (at the evaluation point)',id:'pn',l:'Phase noise skirts',u:'dBm',n:1,f:(C,P)=>P.pn>-300?P.pn:null},
+  {g:'Noise (at the evaluation point)',id:'spur',l:'Spur products',u:'dBm',n:1,f:(C,P)=>P.spur>-300?P.spur:null},
+  {g:'Noise (at the evaluation point)',id:'noise',l:'Total noise (RF + ADC + phase noise)',u:'dBm',n:1,f:(C,P)=>P.noise},
+  {g:'Noise (at the evaluation point)',id:'clut',l:'Noise + clutter, 1 chirp',u:'dBm',n:1,f:(C,P)=>P.clut},
+  {g:'Noise (at the evaluation point)',id:'loss',l:'Phase noise loss',u:'dB',n:1,f:(C,P)=>P.noise-P.therm},
+  {g:'Noise (at the evaluation point)',id:'enf',l:'Effective NF',u:'dB',n:1,f:(C,P)=>P.therm-P.Hr-(-174+C.bdb)},
+  {g:'Target',id:'tP',l:'Target power @ RX',u:'dBm',t:1,f:(C,P,T)=>T.x.P},
+  {g:'Target',id:'s1',l:'SNR, 1 chirp',u:'dB',t:1,f:(C,P,T)=>T.s1},
+  {g:'Target',id:'sD',l:'SNR, Doppler',u:'dB',t:1,f:(C,P,T)=>T.sD},
+  {g:'Target',id:'dRt',l:'Range resolution @ target',u:'m',t:1,f:(C,P,T)=>c0/(2*C.S*T.te)},
+  {g:'Receiver',id:'mg',l:'ADC headroom',u:'dB',f:C=>C.mg},
+  {g:'Receiver',id:'rmg',l:'RF P1dB headroom',u:'dB',f:C=>C.rmg},
+  {g:'Receiver',id:'Pl',l:'Leakage power @ RX',u:'dBm',f:C=>C.objs[0].P},
+  {g:'Radar',id:'dR',l:'Range resolution (best)',u:'m',f:C=>c0/(2*C.S*C.Tfull)},
+  {g:'Radar',id:'fbm',l:'Beat at max. range',u:'MHz',f:C=>C.fbmax/1e6},
+  {g:'Radar',id:'vmx',l:'Max. velocity',u:'m/s',f:C=>C.vmax}
+];
+const SW={p:'iso',a:30,b:90,n:101,log:0,xa:1,at:'rng',atR:250,tg:'t1',y:['therm','pn','noise'],y0:'',y1:'',y2:'',y3:'',ya:1,y2a:1,cur:1,grid:1,col:{},note:['ptx','lk'],noteOn:1,noteCorner:'auto'};
+try{Object.assign(SW,JSON.parse(localStorage.getItem('fmcwRadarSim.sweep2')||'{}'))}catch(e){}
+let swXP=[],swCurX=null,swAxes=[];
+function swRow(host,label,ctrls,unit){const d=el('div','f');const l=el('label',null,label);l.title=label;if(ctrls[0]&&ctrls[0].id)l.htmlFor=ctrls[0].id;d.appendChild(l);ctrls.forEach(c=>d.appendChild(c));if(unit!==null)d.appendChild(el('span','u',unit||''));host.appendChild(d);return d;}
+function swNum(id,val,step,w){const i=el('input');i.type='number';i.id=id;i.step=step||'any';i.value=val;i.inputMode='decimal';if(w)i.classList.add('pair');
+  i.addEventListener('input',()=>i.classList.add('dirty'));i.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();swRead();runSweep();}});i.addEventListener('change',()=>{swRead();runSweep();});return i;}
+function swSel(id,opts,val,onch){const s=el('select');s.id=id;opts.forEach(([v,t])=>{const o=el('option',null,t);o.value=v;s.appendChild(o);});s.value=val;s.addEventListener('change',onch||(()=>{swRead();runSweep();}));return s;}
+function swAuto(id,on){const b=el('button','abtn','Auto');b.type='button';b.id=id;b.setAttribute('aria-pressed',on?'true':'false');b.title='Fit this axis to the data';
+  b.addEventListener('click',()=>{b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');swRead();runSweep();});return b;}
+function swDefRange(id){
+  const sp=SPEC[id]||{},cur=val(id),u=(swXP.find(q=>q.id===id)||{}).unit||'';
+  let a,b;if(DBU.includes(u)){a=cur-30;b=cur+30;}else if(cur>0){a=cur*0.2;b=cur*2;}else{a=0;b=100;}
+  if(sp.min!==undefined)a=Math.max(a,sp.min);if(sp.max!==undefined)b=Math.min(b,sp.max);
+  const r=x=>Math.round(x*1000)/1000;return[r(a),r(b)];
+}
+function niceRange(lo,hi){if(!isFinite(lo)||!isFinite(hi))return null;let s=hi-lo;if(s<=1e-9){s=Math.max(Math.abs(hi)*0.1,1);lo-=s/2;hi+=s/2;s=hi-lo;}
+  lo-=s*0.06;hi+=s*0.06;const raw=(hi-lo)/6,p10=Math.pow(10,Math.floor(lg(raw))),st=[1,2,5,10].map(m=>m*p10).find(x=>x>=raw-1e-12);
+  return[Math.floor(lo/st)*st,Math.ceil(hi/st)*st].map(x=>+x.toPrecision(6));}
+function buildSweepUI(){
+  swXP=sweepParams();
+  if(!swXP.find(q=>q.id===SW.p))SW.p='iso';
+  const sx=$('sx');sx.innerHTML='';
+  const ps=swSel('swp',swXP.map(q=>[q.id,q.label]),SW.p,()=>{SW.p=$('swp').value;const r=swDefRange(SW.p);$('swa').value=r[0];$('swb').value=r[1];
+    $('swau').textContent=(swXP.find(q=>q.id===SW.p)||{}).unit||'';swRead();runSweep();});
+  swRow(sx,'Parameter',[ps],'');
+  const u=(swXP.find(q=>q.id===SW.p)||{}).unit||'';
+  swRow(sx,'Limits',[swNum('swa',SW.a,'any','64px'),swNum('swb',SW.b,'any','64px'),swAuto('swxa',SW.xa)],u).lastChild.id='swau';
+  swRow(sx,'X scale',[swSel('swlog',[['0','Linear'],['1','Logarithmic']],String(SW.log))],'');
+  const sy=$('sy');sy.innerHTML='';
+  {const sa=swSel('swat',[['rng','Fixed range']].concat(OBJ.filter(o=>o.k==='t').map(o=>[o.id,o.name])),SW.at),ri=swNum('swatr',SW.atR,10);ri.title='Fixed range';ri.setAttribute('aria-label','Fixed range in meters');
+    swRow(sy,'Noise at',[sa,ri],'m');}
+  swRow(sy,'Target outputs',[swSel('swtg',OBJ.filter(o=>o.k==='t').map(o=>[o.id,o.name]),SW.tg)],'');
+  let g='';
+  YQ.forEach(q=>{
+    if(q.g!==g){g=q.g;sy.appendChild(el('div','ysub',g));}
+    const lb=el('label','ychk');lb.id='yq-'+q.id;const cb=el('input');cb.type='checkbox';cb.checked=SW.y.includes(q.id);cb.dataset.q=q.id;
+    cb.addEventListener('change',()=>{swRead();runSweep();});
+    const sw=el('span','sw2');lb.appendChild(cb);lb.appendChild(sw);lb.appendChild(document.createTextNode(q.l));lb.appendChild(el('span','uu',q.u));sy.appendChild(lb);
+  });
+  sy.appendChild(el('div','ysub','Axis limits (min, max)'));
+  swRow(sy,'Left axis',[swNum('swy0',SW.y0,'any','64px'),swNum('swy1',SW.y1,'any','64px'),swAuto('swya',SW.ya)],'');
+  swRow(sy,'Right axis',[swNum('swy2',SW.y2,'any','64px'),swNum('swy3',SW.y3,'any','64px'),swAuto('swy2a',SW.y2a)],'');
+  const so=$('so');so.innerHTML='';
+  swRow(so,'Current value',[swSel('swcu',[['1','On'],['0','Off']],String(SW.cur))],'');
+  const seg=el('div','seg');[['0','Coarse'],['1','Normal'],['2','Fine']].forEach(([v,t])=>{const b=el('button',null,t);b.type='button';b.dataset.g=v;b.setAttribute('aria-pressed',String(SW.grid)===v?'true':'false');
+    b.addEventListener('click',()=>{seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));swRead();runSweep();});seg.appendChild(b);});
+  swRow(so,'Grid density',[seg],'');
+  so.appendChild(el('div','ysub','Info note'));
+  swRow(so,'Show note',[swSel('swno',[['1','On'],['0','Off']],String(SW.noteOn))],'');
+  swRow(so,'Position',[swSel('swnc',[['auto','Auto (empty corner)'],['0','Top left'],['1','Top right'],['2','Bottom left'],['3','Bottom right']],String(SW.noteCorner))],'');
+  const ad=swSel('swnadd',[['','Add a parameter…']].concat(swXP.map(q=>[q.id,q.label+(q.unit?' ('+q.unit+')':'')])),'',()=>{const id=$('swnadd').value;if(id&&!SW.note.includes(id))SW.note.push(id);$('swnadd').value='';renderNoteChips();swRead();runSweep();});
+  swRow(so,'Add to note',[ad],'');
+  const ch=el('div','chips');ch.id='swnchips';so.appendChild(ch);renderNoteChips();
+}
+function renderNoteChips(){const box=$('swnchips');if(!box)return;box.innerHTML='';
+  SW.note.forEach(id=>{const q=swXP.find(z=>z.id===id);if(!q)return;const c=el('span','chip2');c.appendChild(document.createTextNode(q.label));const x=el('button',null,'×');x.type='button';x.title='Remove '+q.label;x.setAttribute('aria-label','Remove '+q.label);
+    x.addEventListener('click',()=>{SW.note=SW.note.filter(z=>z!==id);renderNoteChips();swRead();runSweep();});c.appendChild(x);box.appendChild(c);});}
+function swRead(){
+  SW.p=$('swp').value;SW.a=parseFloat($('swa').value);SW.b=parseFloat($('swb').value);SW.n=101;
+  SW.log=+$('swlog').value;SW.at=$('swat').value;SW.atR=Math.max(0,parseFloat($('swatr').value)||0);SW.tg=$('swtg').value;
+  SW.y=[...document.querySelectorAll('#sy .ychk input:checked')].map(c=>c.dataset.q);
+  ['y0','y1','y2','y3'].forEach(k=>SW[k]=$('sw'+k).value);SW.xa=$('swxa').getAttribute('aria-pressed')==='true'?1:0;SW.ya=$('swya').getAttribute('aria-pressed')==='true'?1:0;SW.y2a=$('swy2a').getAttribute('aria-pressed')==='true'?1:0;SW.cur=+$('swcu').value;
+  const gb=document.querySelector('#so .seg button[aria-pressed="true"]');SW.grid=gb?+gb.dataset.g:1;
+  SW.noteOn=+$('swno').value;{const nc=$('swnc').value;SW.noteCorner=nc==='auto'?'auto':+nc;}
+  SW.col=SW.col||{};Object.keys(SW.col).forEach(id=>{if(!SW.y.includes(id))delete SW.col[id];});
+  const used=new Set();SW.y.forEach(id=>{if(id in SW.col){if(used.has(SW.col[id]))delete SW.col[id];else used.add(SW.col[id]);}});
+  SW.y.forEach(id=>{if(!(id in SW.col)){let c=0;while(used.has(c))c++;SW.col[id]=c;used.add(c);}});
+  document.querySelectorAll('#sweep input.dirty').forEach(e=>e.classList.remove('dirty'));
+  try{localStorage.setItem('fmcwRadarSim.sweep2',JSON.stringify(SW))}catch(e){}
+}
+function swNoteLines(){
+  if(!SW.noteOn||!SW.note||!SW.note.length)return null;const L=[];
+  SW.note.forEach(id=>{const q=swXP.find(z=>z.id===id);if(!q)return;const sw=id===SW.p;const v=val(id);L.push(q.label+': '+(sw?'swept':(+v.toPrecision(6))+(q.unit?' '+q.unit:'')));});
+  return L.length?L:null;}
+function swLabels(ch){
+  const ca=ch.chartArea,X=ch.scales.x;if(!ca||!X)return[];const ctx=ch.ctx;ctx.save();ctx.font="600 13.5px 'Barlow Semi Condensed',system-ui,sans-serif";
+  const polys=ch.data.datasets.map(ds=>{const Y=ch.scales[ds.yAxisID||'y'],P=[];if(!Y||!ds.data)return P;ds.data.forEach(q=>{if(q.y==null||q.x==null)P.push(null);else P.push([X.getPixelForValue(q.x),Y.getPixelForValue(q.y)]);});return P;});
+  const pr=(px,py,r)=>Math.hypot(Math.max(r.x-px,0,px-r.x-r.w),Math.max(r.y-py,0,py-r.y-r.h));
+  const ps2=(px,py,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let u=L>0?((px-a[0])*dx+(py-a[1])*dy)/L:0;u=Math.max(0,Math.min(1,u));return Math.hypot(a[0]+u*dx-px,a[1]+u*dy-py);};
+  const cross=(a,b,c,d)=>{const o=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]);return o(a,b,c)*o(a,b,d)<0&&o(c,d,a)*o(c,d,b)<0;};
+  const rsd=(r,a,b)=>{const ins=p=>p[0]>=r.x&&p[0]<=r.x+r.w&&p[1]>=r.y&&p[1]<=r.y+r.h;if(ins(a)||ins(b))return 0;
+    const C=[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]];for(let i=0;i<4;i++)if(cross(a,b,C[i],C[(i+1)%4]))return 0;
+    return Math.min(pr(a[0],a[1],r),pr(b[0],b[1],r),...C.map(c=>ps2(c[0],c[1],a,b)));};
+  const polyDist=(r,P,cap)=>{let m=cap;for(let i=0;i<P.length-1;i++){const a=P[i],b=P[i+1];if(!a||!b)continue;if(Math.max(a[0],b[0])<r.x-cap||Math.min(a[0],b[0])>r.x+r.w+cap)continue;
+    if(Math.max(a[1],b[1])<r.y-cap||Math.min(a[1],b[1])>r.y+r.h+cap)continue;const d=rsd(r,a,b);if(d<m){m=d;if(m===0)break;}}return m;};
+  const out=[],obst=[];
+  ch.$note=null;{const lines=swNoteLines();if(lines){ctx.font="500 13.5px 'Barlow',system-ui,sans-serif";const tw=Math.max(ctx.measureText('Fixed parameters').width+10,...lines.map(s=>ctx.measureText(s).width))+20,th=24+lines.length*18+6;
+    const C=[{x:ca.left+8,y:ca.top+8},{x:ca.right-8-tw,y:ca.top+8},{x:ca.left+8,y:ca.bottom-8-th},{x:ca.right-8-tw,y:ca.bottom-8-th}];
+    let k=SW.noteCorner;if(k==='auto'||k==null||!(k>=0&&k<=3)){let best=-1,bs=-1;[1,0,3,2].forEach(i=>{const r={x:C[i].x,y:C[i].y,w:tw,h:th};let d=60;polys.forEach(P=>{d=Math.min(d,polyDist(r,P,60));});if(d>bs){bs=d;best=i;}});k=best;}
+    ch.$note={x:C[k].x,y:C[k].y,w:tw,h:th,lines,k};obst.push({x:C[k].x,y:C[k].y,w:tw,h:th});}}
+  ctx.font="600 13.5px 'Barlow Semi Condensed',system-ui,sans-serif";
+  if(swAxes.length>1){const cnt={y:0,y2:0};ch.data.datasets.forEach((ds,j)=>{const ax=ds.yAxisID||'y',k=cnt[ax]++;const fr=ax==='y'?0.05+0.06*k:0.95-0.06*k,px=ca.left+fr*(ca.right-ca.left);
+    const yv=tipEval(ch,{ds:j,x:X.getValueForPixel(px),y:0});if(yv!=null){const py=ch.scales[ax].getPixelForValue(yv);obst.push({x:px-16,y:py-11,w:32,h:22});}});}
+  ch.data.datasets.forEach((ds,j)=>{const P=polys[j];if(!P.length)return;const t=ds.$name,w=ctx.measureText(t).width,hh=14,Y=ch.scales[ds.yAxisID||'y'];
+    const anchors=[];for(let f=0.03;f<=0.971;f+=0.02){const cx=ca.left+f*(ca.right-ca.left),yv=tipEval(ch,{ds:j,x:X.getValueForPixel(cx),y:(Y.min+Y.max)/2});if(yv==null)continue;const py=Y.getPixelForValue(yv);if(py>=ca.top&&py<=ca.bottom)anchors.push([cx,py]);}
+    if(!anchors.length){for(let i=0;i<P.length;i++){const q=P[i];if(q&&q[0]>=ca.left&&q[0]<=ca.right&&q[1]>=ca.top&&q[1]<=ca.bottom)anchors.push(q);}}
+    if(!anchors.length)return;
+    const cands=[];anchors.forEach(([cx,py])=>{
+      [5,9,14,20,28].forEach(o=>{cands.push({x:cx-w/2,y:py-o-hh},{x:cx-w/2,y:py+o});});
+      [6,12,20].forEach(o=>{cands.push({x:cx+o,y:py-hh/2},{x:cx-o-w,y:py-hh/2});});
+      [6,12].forEach(o=>{cands.push({x:cx+o,y:py-o-hh},{x:cx-o-w,y:py-o-hh},{x:cx+o,y:py+o},{x:cx-o-w,y:py+o});});});
+    const inside=r=>r.x>=ca.left+3&&r.x+w<=ca.right-3&&r.y>=ca.top+3&&r.y+hh<=ca.bottom-3;
+    const hitL=r=>out.concat(obst).some(o=>r.x<o.x+o.w+6&&r.x+w+6>o.x&&r.y<o.y+o.h+2&&r.y+hh+2>o.y);
+    const pass=(minOwn,minOth,avoid)=>{let best=null;
+      for(const c of cands){const r={x:c.x,y:c.y,w,h:hh};if(!inside(r)||(avoid&&hitL(r)))continue;const own=polyDist(r,P,40);if(own<minOwn)continue;
+        let oth=60;for(let k=0;k<polys.length;k++){if(k===j)continue;oth=Math.min(oth,polyDist(r,polys[k],60));if(oth<minOth)break;}if(oth<minOth)continue;
+        const sc=Math.min(oth,24)-1.0*own;if(!best||sc>best.sc){best={sc,r};if(sc>=20)break;}}return best;};
+    const best=pass(3,3,true)||pass(1,1,true)||pass(1,0,true)||pass(0,0,false)||{r:{x:Math.min(Math.max(anchors[0][0]-w/2,ca.left+3),ca.right-3-w),y:Math.max(anchors[0][1]-6-hh,ca.top+3)}};
+    out.push({x:best.r.x,y:best.r.y,w,h:hh,t,c:ds.borderColor});});
+  ctx.restore();return out;}
+const swPlugin={id:'swp',afterUpdate(ch,args){if(!ch.$labels||!args||args.mode!=='none')ch.$labels=swLabels(ch);},afterDatasetsDraw(ch){
+  const{ctx,chartArea:ca}=ch,X=ch.scales.x;ctx.save();
+  if(swCurX!=null){const px=X.getPixelForValue(swCurX);if(px>=ca.left&&px<=ca.right){ctx.strokeStyle='#BAC3CF';ctx.setLineDash([5,4]);ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(px,ca.top);ctx.lineTo(px,ca.bottom);ctx.stroke();ctx.setLineDash([]);
+    ctx.font="600 12px 'Barlow Semi Condensed',system-ui,sans-serif";ctx.textBaseline='bottom';ctx.fillStyle='#D3DAE3';ctx.textAlign='left';ctx.fillText('current',px+4,ca.top+14);}}
+  if(ch.$note){const n=ch.$note;ctx.fillStyle='rgba(30,38,50,0.92)';ctx.strokeStyle='#8794A8';ctx.lineWidth=1;ctx.fillRect(n.x,n.y,n.w,n.h);ctx.strokeRect(n.x+.5,n.y+.5,n.w-1,n.h-1);
+    ctx.textAlign='left';ctx.textBaseline='top';ctx.font="600 13px 'Barlow Semi Condensed',system-ui,sans-serif";ctx.fillStyle='#BAC3CF';ctx.fillText('FIXED PARAMETERS',n.x+10,n.y+7);
+    ctx.font="500 13.5px 'Barlow',system-ui,sans-serif";ctx.fillStyle='#EEF2F7';n.lines.forEach((s,i)=>ctx.fillText(s,n.x+10,n.y+26+i*18));}
+  if(ch.$labels){ctx.font="600 13.5px 'Barlow Semi Condensed',system-ui,sans-serif";ctx.textBaseline='alphabetic';ctx.textAlign='left';ctx.lineJoin='round';
+    ch.$labels.forEach(L=>{ctx.lineWidth=3.5;ctx.strokeStyle='#2B3646';ctx.strokeText(L.t,L.x,L.y+L.h-3);ctx.fillStyle=L.c;ctx.fillText(L.t,L.x,L.y+L.h-3);});}
+  if(swAxes.length>1){const cnt={y:0,y2:0};
+    ch.data.datasets.forEach((ds,j)=>{const ax=ds.yAxisID||'y',k=cnt[ax]++,Y=ch.scales[ax];if(!Y)return;
+      const fr=ax==='y'?0.05+0.06*k:0.95-0.06*k,px0=ca.left+fr*(ca.right-ca.left),xv=X.getValueForPixel(px0);
+      const yv=tipEval(ch,{ds:j,x:xv,y:(Y.min+Y.max)/2});if(yv==null)return;const px=X.getPixelForValue(xv),py=Y.getPixelForValue(yv);if(py<ca.top||py>ca.bottom)return;
+      const d=ax==='y'?-1:1;ctx.fillStyle=ds.borderColor;ctx.strokeStyle='#0D1320';ctx.lineWidth=1.6;ctx.beginPath();
+      const tip=px+d*14,hb=px+d*2,tail=px-d*12;ctx.lineJoin='miter';
+      ctx.moveTo(tip,py);ctx.lineTo(hb,py-8);ctx.lineTo(hb,py-3);ctx.lineTo(tail,py-3);ctx.lineTo(tail,py+3);ctx.lineTo(hb,py+3);ctx.lineTo(hb,py+8);ctx.closePath();ctx.fill();ctx.stroke();});}
+  ctx.restore();}};
+const c4=new Chart($('c4'),{type:'scatter',data:{datasets:[]},options:{animation:false,responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{callbacks:{label:q=>q.dataset.$name+': '+q.parsed.y.toFixed(2)+' '+q.dataset.$unit}}},
+  scales:{x:{type:'linear',grid:{color:GR},ticks:{font:{size:15,weight:'500'}},title:{display:true,font:{size:17,weight:'600'},text:''}},
+          y:{position:'left',grid:{color:GR},ticks:{font:{size:15,weight:'500'}},title:{display:true,font:{size:17,weight:'600'},text:''}},
+          y2:{position:'right',display:false,grid:{drawOnChartArea:false},ticks:{font:{size:15,weight:'500'}},title:{display:true,font:{size:17,weight:'600'},text:''}}}},
+  plugins:[swPlugin,tipPlugin]});
+c4.$fmt=(x,y,ds)=>{const q=swXP.find(z=>z.id===SW.p)||{label:'x',unit:''};return[q.label+': '+(+x.toPrecision(6))+' '+q.unit,ds.$name+': '+y.toFixed(2)+' '+ds.$unit];};
+attachTips(c4,$('c4'));
+c4.$snap=x=>{const q=swXP.find(z=>z.id===SW.p)||{},u=q.unit||'',s=c4.scales.x;if(s.type==='logarithmic')return snapLog(x);const span=s.max-s.min;
+  let st;if(DBU.includes(u))st=0.1;else if(u==='m')st=span>200?5:niceStep(span/100);else if(u==='µs'||u==='ns'||u==='cm')st=span>50?1:0.1;else st=niceStep(span/200);return snapLin(x,st);};
+function runSweep(){
+  const msgs=[];const v={};Object.keys(SPEC).forEach(id=>v[id]=val(id));
+  const xp=swXP.find(q=>q.id===SW.p);if(!xp)return;
+  $('swatr').disabled=SW.at!=='rng';
+  if(SW.xa){const r=swDefRange(SW.p);SW.a=r[0];SW.b=r[1];$('swa').value=r[0];$('swb').value=r[1];}
+  $('swa').disabled=$('swb').disabled=SW.xa===1;
+  let a=SW.a,b=SW.b,n=SW.n,lgx=SW.log===1;
+  if(!isFinite(a)||!isFinite(b)||a===b){$('swx').innerHTML='<p class="err"><i></i>Enter two different limits for the X axis.</p>';return;}
+  if(a>b)[a,b]=[b,a];
+  if(lgx&&a<=0){lgx=false;msgs.push(['warn','Logarithmic X needs positive limits; using a linear axis.']);}
+  const xs=[];for(let i=0;i<n;i++){const t=i/(n-1);xs.push(lgx?Math.pow(10,lg(a)+t*(lg(b)-lg(a))):a+t*(b-a));}
+  const qs=SW.y.map(id=>YQ.find(q=>q.id===id)).filter(Boolean);
+  const units=[];qs.forEach(q=>{if(!units.includes(q.u))units.push(q.u);});swAxes=units.slice(0,2);
+  const axOf=u=>units.indexOf(u)===0?'y':'y2';
+  document.querySelectorAll('#sy .ychk').forEach(lb=>{const q=YQ.find(z=>'yq-'+z.id===lb.id),cb=lb.querySelector('input');const dis=!cb.checked&&units.length>=2&&!units.includes(q.u);cb.disabled=dis;lb.classList.toggle('dis',dis);lb.title=dis?'Two units are already on the chart; uncheck one to use this.':'';});
+  const ownerOff=[...OBJ,...SPUR].find(o=>SW.p.startsWith(o.id)&&SW.p.length===o.id.length+1&&!ON[o.id]);
+  if(ownerOff)msgs.push(['warn',`${ownerOff.name} is off in the simulator, so sweeping it changes nothing. Turn it on first.`]);
+  if(qs.some(q=>q.n)&&SW.at!=='rng'&&!ON[SW.at])msgs.push(['warn',`${OBJ.find(o=>o.id===SW.at).name} is off; noise outputs need it on, or choose a fixed range.`]);
+  if(qs.some(q=>q.t)&&!ON[SW.tg])msgs.push(['warn',`${OBJ.find(o=>o.id===SW.tg).name} is off in the Scene; target outputs need it on.`]);
+  const data=qs.map(()=>[]);
+  xs.forEach(x=>{const v2=Object.assign({},v,{[SW.p]:x});const C=core(v2);
+    const T=C?C.tgt(SW.tg):null;let P=null;
+    if(C){if(SW.at==='rng')P=C.point(SW.atR);else{const Te=C.tgt(SW.at);P=Te?Te.T:null;}}
+    qs.forEach((q,j)=>{let y=null;if(C&&(!q.n||P)&&(!q.t||T)){try{y=q.f(C,P,T);}catch(e){y=null;}}data[j].push({x,y:(y==null||!isFinite(y))?null:y});});});
+  c4.data.datasets=qs.map((q,j)=>({data:data[j],showLine:true,spanGaps:false,borderColor:SWPAL[(SW.col[q.id]||0)%8],borderWidth:2,borderDash:axOf(q.u)==='y2'?[7,4]:[],pointRadius:0,pointHoverRadius:3,yAxisID:axOf(q.u),$id:q.id,$name:q.l,$unit:q.u}));
+  c4.$tips=(c4.$tips||[]).map(t=>{const i=c4.data.datasets.findIndex(d=>d.$id===t.key);if(i<0)return null;t.ds=i;return t;}).filter(Boolean);
+  document.querySelectorAll('#sy .ychk').forEach(lb=>{const i=qs.findIndex(q=>'yq-'+q.id===lb.id);const s=lb.querySelector('.sw2');s.style.borderTopColor=i>=0?SWPAL[(SW.col[qs[i].id]||0)%8]:'transparent';s.style.borderTopStyle=(i>=0&&axOf(qs[i].u)==='y2')?'dashed':'solid';});
+  const X=c4.options.scales.x;X.type=lgx?'logarithmic':'linear';X.min=a;X.max=b;X.title.text=xp.label+(xp.unit?' ('+xp.unit+')':'');
+  const setAx=(k,u,auto,i0,i1)=>{const sc=c4.options.scales[k];sc.display=!!u;sc.title.text=u||'';const e0=$(i0),e1=$(i1);e0.disabled=e1.disabled=auto||!u;
+    if(!u){sc.min=sc.max=undefined;return;}
+    if(auto){let lo=Infinity,hi=-Infinity;c4.data.datasets.forEach(ds=>{if(ds.yAxisID!==k)return;ds.data.forEach(p=>{if(p.y!=null){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});});
+      const r=niceRange(lo,hi);if(r){sc.min=r[0];sc.max=r[1];e0.value=r[0];e1.value=r[1];}else{sc.min=sc.max=undefined;}}
+    else{const p0=parseFloat(e0.value),p1=parseFloat(e1.value);sc.min=isFinite(p0)?p0:undefined;sc.max=isFinite(p1)?p1:undefined;}};
+  setAx('y',units[0],SW.ya===1,'swy0','swy1');setAx('y2',units[1],SW.y2a===1,'swy2','swy3');
+  {const tg=[5,10,20][SW.grid]||10,ns=s=>{const raw=s/tg,p10=Math.pow(10,Math.floor(lg(raw)));return[1,2,2.5,5,10].map(m=>m*p10).find(x=>x>=raw*0.999);};
+    X.ticks.stepSize=lgx?undefined:ns(b-a);X.ticks.maxTicksLimit=lgx?[6,11,21][SW.grid]:200;X.ticks.autoSkip=false;
+    ['y','y2'].forEach(k=>{const s=c4.options.scales[k];if(s.min!=null&&s.max!=null&&s.max>s.min){s.ticks.stepSize=ns(s.max-s.min);s.ticks.maxTicksLimit=200;}else{s.ticks.stepSize=undefined;s.ticks.maxTicksLimit=[6,11,21][SW.grid];}s.ticks.autoSkip=false;});}
+  swCurX=SW.cur?v[SW.p]:null;
+  c4.update();
+  const two=units.length>1;
+  $('swl').innerHTML=qs.map((q,j)=>`<span><i class="sw" style="border-color:${SWPAL[(SW.col[q.id]||0)%8]};${axOf(q.u)==='y2'?'border-top-style:dashed':''}"></i>${q.l} (${q.u}${two?', '+(axOf(q.u)==='y'?'◄ left':'right ►'):''})</span>`).join('')+'<span class="hint">Click a line for a marker, drag to move it</span>';
+  $('swtt').textContent=qs.length?`${qs.map(q=>q.l).slice(0,3).join(', ')}${qs.length>3?' …':''} vs. ${xp.label}`:`Select outputs for the Y axis`;
+  const atTxt=SW.at==='rng'?`noise at ${fmt(SW.atR,0)} m`:`noise at ${OBJ.find(o=>o.id===SW.at).name}`;
+  $('swts').textContent=`${n} points, ${+a.toPrecision(6)} to ${+b.toPrecision(6)} ${xp.unit}, ${atTxt}`;
+  if(!qs.length)msgs.push(['info','Tick one or more outputs in the Y axis box.']);
+  $('swx').innerHTML=(msgs.length?msgs:[['ok','Click a line to place a marker, drag it to move, click it again to remove.']]).map(m=>`<p class="${m[0]}"><i></i>${m[1]}</p>`).join('');
+}
+function openSweep(){closeDoc();buildSweepUI();noteButtons();$('sweep').classList.add('open');$('sweep').setAttribute('aria-hidden','false');swRead();runSweep();}
+function closeSweep(){$('sweep').classList.remove('open');$('sweep').setAttribute('aria-hidden','true');update();}
+$('swopen').onclick=openSweep;$('swclose').onclick=closeSweep;$('swrun').onclick=()=>{swRead();runSweep();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('sweep').classList.contains('open')&&!$('drawer').classList.contains('open'))closeSweep();});
+noteButtons();
+$('reset').onclick=()=>{
+  try{localStorage.removeItem(KEY)}catch(e){}
+  Object.keys(SPEC).forEach(id=>{$(id).value=SPEC[id].def;});
+  base=MEAS.slice();OBJ.forEach(o=>ON[o.id]=o.on);SPUR.forEach(s=>ON[s.id]=s.on);update();
+};
+const PKEY='fmcwRadarSim.presets';
+let presets=[];
+try{presets=JSON.parse(localStorage.getItem(PKEY)||'[]')||[]}catch(e){presets=[]}
+function snap(){const f={};Object.keys(SPEC).forEach(id=>f[id]=$(id).value);return{f,on:{...ON},base:base.slice()};}
+function applySnap(s){
+  Object.keys(SPEC).forEach(id=>{if(s.f&&id in s.f)$(id).value=s.f[id];});
+  OBJ.concat(SPUR).forEach(o=>{if(s.on&&o.id in s.on)ON[o.id]=!!s.on[o.id];});
+  if(Array.isArray(s.base)&&s.base.length===6)base=s.base.map(Number);
+  update();
+}
+function storePresets(){try{localStorage.setItem(PKEY,JSON.stringify(presets))}catch(e){}}
+function renderPresets(){
+  const box=$('presets');box.innerHTML='';
+  presets.forEach((p,i)=>{
+    const c=el('span','chip');
+    const b=el('button',null,p.name);b.type='button';b.title='Load '+p.name;b.onclick=()=>applySnap(p.s);
+    const x=el('button',null,'×');x.type='button';x.title='Delete '+p.name;x.setAttribute('aria-label','Delete '+p.name);
+    x.onclick=()=>{presets.splice(i,1);storePresets();renderPresets();};
+    c.appendChild(b);c.appendChild(x);box.appendChild(c);
+  });
+}
+$('save').onclick=()=>{
+  update();
+  const nm=($('pname').value||'').trim()||('Preset '+(presets.length+1));
+  const entry={name:nm,s:snap()};
+  const ex=presets.findIndex(p=>p.name===nm);
+  if(ex>=0)presets[ex]=entry;else presets.push(entry);
+  storePresets();renderPresets();$('pname').value='';
+};
+$('pname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('save').click();}});
+renderPresets();
+update();
+</script>
+</body>
+</html>
